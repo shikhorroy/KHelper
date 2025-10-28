@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Output Comparison Results</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="comparison-header">
+    <h1>📊 Output Comparison Results</h1>
+
+    <div class="comparison-summary">
+        <div class="summary-card" id="matched-card">
+            <h2 id="matched-count">0</h2>
+            <p>Matched Files</p>
+        </div>
+        <div class="summary-card">
+            <h2 id="failed-count">0</h2>
+            <p>Failed Files</p>
+        </div>
+        <div class="summary-card">
+            <h2 id="total-count">0</h2>
+            <p>Total Files</p>
+        </div>
+    </div>
+
+    <div class="navigation-buttons">
+        <a href="/">
+            <button class="nav-button">← Back to Home</button>
+        </a>
+        <a href="tests.html">
+            <button class="nav-button test-button">🧪 Tests Management</button>
+        </a>
+        <button class="nav-button refresh-button" onclick="location.reload()">🔄 Refresh</button>
+    </div>
+</div>
+
+<div id="comparisons-container"></div>
+
+<script src="compare.js"></script>
+</body>
+</html>

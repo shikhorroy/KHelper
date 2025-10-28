@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Static Files Working!</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 50px auto;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .test-success h1 {
+            margin: 0 0 20px 0;
+            border: none;
+            font-size: 2.5em;
+        }
+        .test-success p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        .test-links {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .test-links a {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            padding: 12px 25px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .test-links a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-success">
+        <h1>✅ Success!</h1>
+        <p>🎉 All HTML/CSS/JS files are working perfectly!</p>
+        <p id="js-test">JavaScript: Testing...</p>
+
+        <div class="test-links">
+            <a href="/">🏠 Main Page</a>
+            <a href="compare.html">📊 Compare</a>
+            <a href="tests.html">🧪 Tests</a>
+        </div>
+    </div>
+
+    <script>
+        console.log('✅ JavaScript is working!');
+        document.getElementById('js-test').textContent = 'JavaScript: ✅ Working!';
+
+        // Test API call
+        fetch('/api/pending-requests')
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ API call successful:', data);
+            })
+            .catch(error => {
+                console.log('⚠️ API test:', error);
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Case Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="test-management-header">
+    <h1>🧪 Test Case Management</h1>
+    <div class="test-summary">
+        Total Test Cases: <span id="total-tests">0</span>
+    </div>
+
+    <div class="navigation-buttons">
+        <a href="/">
+            <button class="nav-button">← Back to Home</button>
+        </a>
+        <a href="compare.html">
+            <button class="nav-button comparison-button">📊 Compare Outputs</button>
+        </a>
+    </div>
+</div>
+
+<!-- Add new test case section -->
+<div class="add-test-section">
+    <h2>➕ Add New Test Case</h2>
+    <div class="test-form">
+        <div class="form-group">
+            <label>Input:</label>
+            <textarea class="test-input" id="new-test-input" placeholder="Enter test input..." rows="5"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Expected Output:</label>
+            <textarea class="test-output" id="new-test-output" placeholder="Enter expected output..." rows="5"></textarea>
+        </div>
+        <button class="btn-add" onclick="addTestCase()">➕ Add Test Case</button>
+    </div>
+</div>
+
+<!-- Existing test cases -->
+<div class="existing-tests-section">
+    <h2>📋 Existing Test Cases (<span id="test-count">0</span>)</h2>
+    <div id="tests-container">
+        <div class="no-tests">
+            No test cases available. Add your first test case above!
+        </div>
+    </div>
+</div>
+
+<!-- Status message area -->
+<div class="status-message" id="status-message" style="display: none;"></div>
+
+<script src="tests.js"></script>
+</body>
+</html>
