@@ -1,6 +1,5 @@
 package ktorapp.routes
 
-import ktorapp.config.ServerConfig
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -8,15 +7,10 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import ktorapp.config.ServerConfig
 import ktorapp.models.PendingRequest
 import ktorapp.models.Problem
-import ktorapp.services.OutputComparisonService
-import ktorapp.services.ProblemService
-import ktorapp.services.RequestManager
-import ktorapp.services.TestCaseDeleteRequest
-import ktorapp.services.TestCaseRequest
-import ktorapp.services.TestCaseService
-import ktorapp.services.TestCaseUpdateRequest
+import ktorapp.services.*
 import java.nio.file.Path
 import java.util.*
 
@@ -24,7 +18,8 @@ class ProblemRoutes(
     private val requestManager: RequestManager,
     private val problemService: ProblemService,
     private val comparisonService: OutputComparisonService,
-    private val testCaseService: TestCaseService
+    private val testCaseService: TestCaseService,
+    private val archiveService: ArchiveService
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -60,6 +55,13 @@ class ProblemRoutes(
             )
         }
 
+        get("/archive.html") {
+            call.respondText(
+                this::class.java.classLoader.getResource("static/archive.html")?.readText() ?: "Not found",
+                ContentType.Text.Html
+            )
+        }
+
         // Serve CSS
         get("/styles.css") {
             call.respondText(
@@ -86,6 +88,13 @@ class ProblemRoutes(
         get("/tests.js") {
             call.respondText(
                 this::class.java.classLoader.getResource("static/tests.js")?.readText() ?: "// Not found",
+                ContentType.Application.JavaScript
+            )
+        }
+
+        get("/archive.js") {
+            call.respondText(
+                this::class.java.classLoader.getResource("static/archive.js")?.readText() ?: "// Not found",
                 ContentType.Application.JavaScript
             )
         }
@@ -212,6 +221,96 @@ class ProblemRoutes(
             } catch (e: Exception) {
                 call.respond(FileContentResponse(false, "", e.message ?: "Unknown error"))
             }
+        }
+
+        // Serve .problem-meta.txt file
+        get("/.problem-meta.txt") {
+            try {
+                val base = Path.of(System.getProperty("user.dir"))
+                val metaFile = base.resolve(".problem-meta.txt")
+
+                if (metaFile.toFile().exists()) {
+                    val content = metaFile.toFile().readText()
+                    call.respondText(content, ContentType.Text.Plain)
+                } else {
+                    call.respondText("", ContentType.Text.Plain, HttpStatusCode.NotFound)
+                }
+            } catch (e: Exception) {
+                call.respondText("", ContentType.Text.Plain, HttpStatusCode.InternalServerError)
+            }
+        }
+
+        // Serve sample input files
+        get("/sample/input/{fileName}") {
+            try {
+                val fileName = call.parameters["fileName"] ?: ""
+                val base = Path.of(System.getProperty("user.dir"))
+                val inputFile = base.resolve("sample/input").resolve(fileName)
+
+                if (inputFile.toFile().exists()) {
+                    val content = inputFile.toFile().readText()
+                    call.respondText(content, ContentType.Text.Plain)
+                } else {
+                    call.respondText("", ContentType.Text.Plain, HttpStatusCode.NotFound)
+                }
+            } catch (e: Exception) {
+                call.respondText("", ContentType.Text.Plain, HttpStatusCode.InternalServerError)
+            }
+        }
+
+        // Serve sample output files
+        get("/sample/output/{fileName}") {
+            try {
+                val fileName = call.parameters["fileName"] ?: ""
+                val base = Path.of(System.getProperty("user.dir"))
+                val outputFile = base.resolve("sample/output").resolve(fileName)
+
+                if (outputFile.toFile().exists()) {
+                    val content = outputFile.toFile().readText()
+                    call.respondText(content, ContentType.Text.Plain)
+                } else {
+                    call.respondText("", ContentType.Text.Plain, HttpStatusCode.NotFound)
+                }
+            } catch (e: Exception) {
+                call.respondText("", ContentType.Text.Plain, HttpStatusCode.InternalServerError)
+            }
+        }
+
+        // Archive API routes
+        // Get all archived problems
+        get("/api/archives") {
+            val response = archiveService.listArchives()
+            call.respond(response)
+        }
+
+        // Archive current problem
+        post("/api/archives/archive") {
+            val body = call.receiveText()
+            val problem = json.decodeFromString<Problem>(body)
+            val response = archiveService.archiveProblem(problem, overwrite = false)
+            call.respond(response)
+        }
+
+        // Archive current problem with overwrite confirmation
+        post("/api/archives/archive-overwrite") {
+            val body = call.receiveText()
+            val problem = json.decodeFromString<Problem>(body)
+            val response = archiveService.archiveProblem(problem, overwrite = true)
+            call.respond(response)
+        }
+
+        // Import archived problem
+        post("/api/archives/import/{archiveId}") {
+            val archiveId = call.parameters["archiveId"] ?: ""
+            val response = archiveService.importArchive(archiveId)
+            call.respond(response)
+        }
+
+        // Delete archived problem
+        delete("/api/archives/{archiveId}") {
+            val archiveId = call.parameters["archiveId"] ?: ""
+            val response = archiveService.deleteArchive(archiveId)
+            call.respond(response)
         }
     }
 }

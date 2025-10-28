@@ -17,6 +17,7 @@ import ktorapp.services.OutputComparisonService
 import ktorapp.services.ProblemService
 import ktorapp.services.RequestManager
 import ktorapp.services.TestCaseService
+import ktorapp.services.ArchiveService
 
 class ProblemParserServer {
     private val requestManager = RequestManager()
@@ -25,7 +26,8 @@ class ProblemParserServer {
     private val problemService = ProblemService(fileService, matchedTestTracker)
     private val comparisonService = OutputComparisonService(matchedTestTracker)
     private val testCaseService = TestCaseService(fileService)
-    private val problemRoutes = ProblemRoutes(requestManager, problemService, comparisonService, testCaseService)
+    private val archiveService = ArchiveService(fileService)
+    private val problemRoutes = ProblemRoutes(requestManager, problemService, comparisonService, testCaseService, archiveService)
 
     fun start() {
         embeddedServer(Netty, port = ServerConfig.PORT, host = ServerConfig.LOCALHOST) {

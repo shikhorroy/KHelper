@@ -3,40 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Output Comparison Results</title>
+    <title>🇰Helper - Comparison</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="comparison-header">
-    <h1>📊 Output Comparison Results</h1>
+<!-- Navigation Menu -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-brand">
+            🇰Helper
+        </a>
+        <ul class="nav-menu" id="navMenu">
+            <li class="nav-item">
+                <a href="/" class="nav-link">
+                    🏠 Home
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="compare.html" class="nav-link active">
+                    🔍 Comparison
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="tests.html" class="nav-link">
+                    🧪 Tests Manager
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="archive.html" class="nav-link">
+                    📚 Archives
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
-    <div class="comparison-summary">
-        <div class="summary-card" id="matched-card">
-            <h2 id="matched-count">0</h2>
-            <p>Matched Files</p>
+<div class="container">
+    <div class="comparison-header">
+        <h1>📊 Output Comparison Results</h1>
+
+        <div class="comparison-summary">
+            <div class="summary-card" id="matched-card">
+                <h2 id="matched-count">0</h2>
+                <p>Matched Files</p>
+            </div>
+            <div class="summary-card">
+                <h2 id="failed-count">0</h2>
+                <p>Failed Files</p>
+            </div>
+            <div class="summary-card">
+                <h2 id="total-count">0</h2>
+                <p>Total Files</p>
+            </div>
         </div>
-        <div class="summary-card">
-            <h2 id="failed-count">0</h2>
-            <p>Failed Files</p>
-        </div>
-        <div class="summary-card">
-            <h2 id="total-count">0</h2>
-            <p>Total Files</p>
+
+        <div class="navigation-buttons">
+            <button class="nav-button refresh-button" onclick="location.reload()">🍓 Refresh</button>
         </div>
     </div>
 
-    <div class="navigation-buttons">
-        <a href="/">
-            <button class="nav-button">← Back to Home</button>
-        </a>
-        <a href="tests.html">
-            <button class="nav-button test-button">🧪 Tests Management</button>
-        </a>
-        <button class="nav-button refresh-button" onclick="location.reload()">🔄 Refresh</button>
-    </div>
+    <div id="comparisons-container"></div>
 </div>
-
-<div id="comparisons-container"></div>
 
 <script src="compare.js"></script>
 </body>

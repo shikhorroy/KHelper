@@ -3,29 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KHelper - Pending Requests</title>
+    <title>🇰Helper - Home</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<h1>🎯 KHelper - Pending Requests</h1>
+<!-- Navigation Menu -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-brand">
+            🇰Helper
+        </a>
+        <ul class="nav-menu" id="navMenu">
+            <li class="nav-item">
+                <a href="/" class="nav-link active">
+                    🏠 Home
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="compare.html" class="nav-link">
+                    🔍 Comparison
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="tests.html" class="nav-link">
+                    🧪 Tests Manager
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="archive.html" class="nav-link">
+                    📚 Archives
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
-<div class="status">
-    <span id="server-status">Server running on localhost:10045</span>
-    <span> | </span>
-    <span id="pending-count">Pending: 0</span>
-    <span> | </span>
-    <a href="compare.html" style="color: #2c3e50; font-weight: bold; text-decoration: none; margin-left: 10px;">
-        🔍 Compare Outputs
-    </a>
-    <span> | </span>
-    <a href="tests.html" style="color: #27ae60; font-weight: bold; text-decoration: none; margin-left: 10px;">
-        🧪 Manage Tests
-    </a>
-</div>
+<div class="container">
+    <h1>⏳ Pending Requests</h1>
 
-<div id="requests-container">
-    <div class="no-requests">
-        No pending requests. Waiting for Competitive Companion...
+    <div class="status">
+        <span id="server-status">Server running on localhost:10045</span>
+        <span> | </span>
+        <span id="pending-count">Pending: 0</span>
+    </div>
+
+    <div id="requests-container">
+        <div class="no-requests">
+            No pending requests. Waiting for Competitive Companion...
+        </div>
     </div>
 </div>
 
