@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="CompetitiveCompanionListenerKt" type="JetRunConfigurationType" nameIsGenerated="true">
-    <option name="MAIN_CLASS_NAME" value="CompetitiveCompanionListenerKt" />
+  <configuration default="false" name="RunnerKt" type="JetRunConfigurationType" nameIsGenerated="true">
+    <option name="MAIN_CLASS_NAME" value="RunnerKt" />
     <module name="KHelper.main" />
     <shortenClasspath name="NONE" />
     <method v="2">

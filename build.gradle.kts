@@ -36,12 +36,12 @@ kotlin {
 }
 
 application {
-    mainClass.set("CompetitiveCompanionListenerKt")
+    mainClass.set("MainKt")
 }
 
 tasks.register<JavaExec>("runSolver") {
     group = "application"
     description = "Run the solver in batch mode"
-    mainClass.set("LocalhostSolverKt")
+    mainClass.set("RunnerKt")
     classpath = sourceSets["main"].runtimeClasspath
 }
