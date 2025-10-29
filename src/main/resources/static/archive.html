@@ -276,6 +276,113 @@
         .notification.warning {
             background: #ff9800;
         }
+
+        .group-container {
+            margin-bottom: 25px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .group-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .group-header:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+        }
+
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .group-toggle {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .group-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .group-info h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .group-info p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-group-action {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 6px 12px;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-group-action:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .group-problems {
+            display: none;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .group-problems.expanded {
+            display: block;
+        }
+
+        .problem-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
     </style>
 </head>
 <body>
@@ -375,13 +482,17 @@
 
     <div class="archive-stats" id="stats">
         <div class="stat-card">
-            <h3 id="archiveCount">0</h3>
-            <p>Total Archives</p>
+            <h3 id="groupCount">0</h3>
+            <p>Total Groups</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="problemCount">0</h3>
+            <p>Total Problems</p>
         </div>
     </div>
 
-    <div class="archive-list" id="archiveList">
-        <!-- Archives will be loaded here -->
+    <div id="groupsList">
+        <!-- Groups will be loaded here -->
     </div>
 
     <div class="empty-state" id="emptyState" style="display: none;">
@@ -423,6 +534,47 @@
         <div class="modal-actions">
             <button class="btn btn-cancel" onclick="closeOverwriteModal()">Cancel</button>
             <button class="btn btn-confirm" onclick="confirmOverwrite()">Overwrite</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Group Modal -->
+<div id="renameGroupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>✏️ Rename Group</h2>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label>Current Name:</label>
+                <input type="text" id="currentGroupName" readonly style="background: #f5f5f5;">
+            </div>
+            <div class="input-group">
+                <label>New Name:</label>
+                <input type="text" id="newGroupName" placeholder="Enter new group name">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeRenameGroupModal()">Cancel</button>
+            <button class="btn btn-confirm" style="background: #2196F3;" onclick="confirmRenameGroup()">Rename</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Group Modal -->
+<div id="deleteGroupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚠️ Confirm Delete Group</h2>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete this entire group and all its problems?</p>
+            <p><strong id="deleteGroupName"></strong></p>
+            <p style="color: #f44336;">This will delete <strong id="deleteGroupCount"></strong> problem(s). This action cannot be undone.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeDeleteGroupModal()">Cancel</button>
+            <button class="btn btn-confirm" onclick="confirmDeleteGroup()">Delete Group</button>
         </div>
     </div>
 </div>

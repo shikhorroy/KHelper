@@ -11,6 +11,7 @@ import ktorapp.config.ServerConfig
 import ktorapp.models.PendingRequest
 import ktorapp.models.Problem
 import ktorapp.services.*
+import ktorapp.services.GroupRenameRequest
 import java.nio.file.Path
 import java.util.*
 
@@ -300,16 +301,32 @@ class ProblemRoutes(
         }
 
         // Import archived problem
-        post("/api/archives/import/{archiveId}") {
+        post("/api/archives/import/{groupName}/{archiveId}") {
+            val groupName = call.parameters["groupName"] ?: ""
             val archiveId = call.parameters["archiveId"] ?: ""
-            val response = archiveService.importArchive(archiveId)
+            val response = archiveService.importArchive(archiveId, groupName)
             call.respond(response)
         }
 
         // Delete archived problem
-        delete("/api/archives/{archiveId}") {
+        delete("/api/archives/{groupName}/{archiveId}") {
+            val groupName = call.parameters["groupName"] ?: ""
             val archiveId = call.parameters["archiveId"] ?: ""
-            val response = archiveService.deleteArchive(archiveId)
+            val response = archiveService.deleteArchive(archiveId, groupName)
+            call.respond(response)
+        }
+
+        // Delete entire group
+        delete("/api/archives/group/{groupName}") {
+            val groupName = call.parameters["groupName"] ?: ""
+            val response = archiveService.deleteGroup(groupName)
+            call.respond(response)
+        }
+
+        // Rename group
+        post("/api/archives/group/rename") {
+            val request = call.receive<GroupRenameRequest>()
+            val response = archiveService.renameGroup(request.oldGroupName, request.newGroupName)
             call.respond(response)
         }
     }

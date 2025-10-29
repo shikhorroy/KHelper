@@ -1,7 +1,11 @@
-// Archive management JavaScript
+// Archive management JavaScript with group support
 
 let currentDeleteArchiveId = null;
+let currentDeleteGroupName = null;
+let currentDeleteArchiveName = null;
 let currentProblemData = null;
+let currentRenameGroupName = null;
+let currentDeleteGroupData = null;
 
 // Load archives on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,53 +13,86 @@ document.addEventListener('DOMContentLoaded', () => {
     checkCurrentProblem();
 });
 
-// Load all archives
+// Load all archives grouped by groups
 async function loadArchives() {
     try {
         const response = await fetch('/api/archives');
         const data = await response.json();
 
-        displayArchives(data);
+        displayGroupedArchives(data);
     } catch (error) {
         console.error('Error loading archives:', error);
         showNotification('Failed to load archives', 'error');
     }
 }
 
-// Display archives in the UI
-function displayArchives(data) {
-    const archiveList = document.getElementById('archiveList');
+// Display archives grouped in the UI
+function displayGroupedArchives(data) {
+    const groupsList = document.getElementById('groupsList');
     const emptyState = document.getElementById('emptyState');
-    const archiveCount = document.getElementById('archiveCount');
+    const groupCount = document.getElementById('groupCount');
+    const problemCount = document.getElementById('problemCount');
 
-    archiveCount.textContent = data.count;
+    groupCount.textContent = data.totalGroups;
+    problemCount.textContent = data.totalProblems;
 
-    if (data.count === 0) {
-        archiveList.innerHTML = '';
+    if (data.totalGroups === 0) {
+        groupsList.innerHTML = '';
         emptyState.style.display = 'block';
         return;
     }
 
     emptyState.style.display = 'none';
-    archiveList.innerHTML = data.archives.map(archive => createArchiveCard(archive)).join('');
+    groupsList.innerHTML = data.groups.map(group => createGroupCard(group)).join('');
 }
 
-// Create HTML for a single archive card
-function createArchiveCard(archive) {
-    const archivedDate = new Date(archive.archivedAt).toLocaleString();
+// Create HTML for a group card with its problems
+function createGroupCard(group) {
+    const problemsHtml = group.problems.map(problem => createProblemCard(problem, group.groupName)).join('');
+
+    return `
+        <div class="group-container">
+            <div class="group-header" onclick="toggleGroup('${escapeHtml(group.groupName)}')">
+                <div class="group-header-left">
+                    <span class="group-toggle" id="toggle-${escapeHtml(group.groupName)}">▶</span>
+                    <div class="group-info">
+                        <h2>📁 ${escapeHtml(group.groupName)}</h2>
+                        <p>${group.problemCount} problem${group.problemCount !== 1 ? 's' : ''}</p>
+                    </div>
+                </div>
+                <div class="group-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-group-action" onclick="renameGroup('${escapeHtml(group.groupName)}')">
+                        ✏️ Rename
+                    </button>
+                    <button class="btn btn-group-action" onclick="deleteGroup('${escapeHtml(group.groupName)}', ${group.problemCount})">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+            <div class="group-problems" id="problems-${escapeHtml(group.groupName)}">
+                <div class="problem-list">
+                    ${problemsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Create HTML for a single problem card
+function createProblemCard(problem, groupName) {
+    const archivedDate = new Date(problem.archivedAt).toLocaleString();
 
     return `
         <div class="archive-item">
             <div class="archive-header">
                 <div class="archive-title">
-                    <h3>${escapeHtml(archive.name)}</h3>
-                    <p class="archive-group">${escapeHtml(archive.group)}</p>
+                    <h3>${escapeHtml(problem.name)}</h3>
                 </div>
                 <div class="archive-actions">
-                    <button class="btn btn-import" onclick="importArchive('${archive.id}')">
+                    <button class="btn btn-import" onclick="importArchive('${escapeHtml(problem.id)}', '${escapeHtml(groupName)}')">
                         📥 Import
                     </button>
-                    <button class="btn btn-delete" onclick="deleteArchive('${archive.id}', '${escapeHtml(archive.name)}')">
+                    <button class="btn btn-delete" onclick="deleteArchive('${escapeHtml(problem.id)}', '${escapeHtml(groupName)}', '${escapeHtml(problem.name)}')">
                         🗑️ Delete
                     </button>
                 </div>
@@ -67,12 +104,23 @@ function createArchiveCard(archive) {
                 </div>
                 <div class="archive-info-item">
                     <span>🧪</span>
-                    <span>${archive.testCount} test case${archive.testCount !== 1 ? 's' : ''}</span>
+                    <span>${problem.testCount} test case${problem.testCount !== 1 ? 's' : ''}</span>
                 </div>
             </div>
-            ${archive.url ? `<a href="${escapeHtml(archive.url)}" target="_blank" class="archive-url">🔗 ${escapeHtml(archive.url)}</a>` : ''}
+            ${problem.url ? `<a href="${escapeHtml(problem.url)}" target="_blank" class="archive-url">🔗 ${escapeHtml(problem.url)}</a>` : ''}
         </div>
     `;
+}
+
+// Toggle group expansion
+function toggleGroup(groupName) {
+    const problemsDiv = document.getElementById(`problems-${groupName}`);
+    const toggleIcon = document.getElementById(`toggle-${groupName}`);
+
+    if (problemsDiv && toggleIcon) {
+        problemsDiv.classList.toggle('expanded');
+        toggleIcon.classList.toggle('expanded');
+    }
 }
 
 // Check if there's a current problem to archive
@@ -229,7 +277,8 @@ async function archiveCurrentProblem() {
         } else {
             // Archive already exists
             if (result.message.includes('already exists')) {
-                showOverwriteModal(problem);
+                currentProblemData = problem;
+                showOverwriteModal();
             } else {
                 showNotification(result.message, 'error');
             }
@@ -242,13 +291,13 @@ async function archiveCurrentProblem() {
 }
 
 // Import an archive
-async function importArchive(archiveId) {
-    if (!confirm('Import this archive? This will replace your current sample inputs/outputs and Solver.kt')) {
+async function importArchive(archiveId, groupName) {
+    if (!confirm('Import this archive? This will replace your current sample inputs/outputs and Solution.kt')) {
         return;
     }
 
     try {
-        const response = await fetch(`/api/archives/import/${archiveId}`, {
+        const response = await fetch(`/api/archives/import/${encodeURIComponent(groupName)}/${encodeURIComponent(archiveId)}`, {
             method: 'POST'
         });
 
@@ -269,18 +318,20 @@ async function importArchive(archiveId) {
 }
 
 // Delete an archive (show confirmation)
-function deleteArchive(archiveId, archiveName) {
+function deleteArchive(archiveId, groupName, archiveName) {
     currentDeleteArchiveId = archiveId;
+    currentDeleteGroupName = groupName;
+    currentDeleteArchiveName = archiveName;
     document.getElementById('deleteArchiveName').textContent = archiveName;
     document.getElementById('deleteModal').style.display = 'block';
 }
 
-// Confirm delete
+// Confirm delete archive
 async function confirmDelete() {
-    if (!currentDeleteArchiveId) return;
+    if (!currentDeleteArchiveId || !currentDeleteGroupName) return;
 
     try {
-        const response = await fetch(`/api/archives/${currentDeleteArchiveId}`, {
+        const response = await fetch(`/api/archives/${encodeURIComponent(currentDeleteGroupName)}/${encodeURIComponent(currentDeleteArchiveId)}`, {
             method: 'DELETE'
         });
 
@@ -305,11 +356,109 @@ async function confirmDelete() {
 function closeDeleteModal() {
     document.getElementById('deleteModal').style.display = 'none';
     currentDeleteArchiveId = null;
+    currentDeleteGroupName = null;
+    currentDeleteArchiveName = null;
+}
+
+// Rename group
+function renameGroup(groupName) {
+    currentRenameGroupName = groupName;
+    document.getElementById('currentGroupName').value = groupName;
+    document.getElementById('newGroupName').value = '';
+    document.getElementById('renameGroupModal').style.display = 'block';
+}
+
+// Confirm rename group
+async function confirmRenameGroup() {
+    const newGroupName = document.getElementById('newGroupName').value.trim();
+
+    if (!newGroupName) {
+        showNotification('Please enter a new group name', 'warning');
+        return;
+    }
+
+    if (newGroupName === currentRenameGroupName) {
+        showNotification('New name must be different from current name', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/archives/group/rename', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                oldGroupName: currentRenameGroupName,
+                newGroupName: newGroupName
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Group renamed successfully', 'success');
+            loadArchives();
+        } else {
+            showNotification(result.message, 'error');
+        }
+
+    } catch (error) {
+        console.error('Error renaming group:', error);
+        showNotification('Failed to rename group', 'error');
+    } finally {
+        closeRenameGroupModal();
+    }
+}
+
+// Close rename group modal
+function closeRenameGroupModal() {
+    document.getElementById('renameGroupModal').style.display = 'none';
+    currentRenameGroupName = null;
+}
+
+// Delete group
+function deleteGroup(groupName, problemCount) {
+    currentDeleteGroupData = { groupName, problemCount };
+    document.getElementById('deleteGroupName').textContent = groupName;
+    document.getElementById('deleteGroupCount').textContent = problemCount;
+    document.getElementById('deleteGroupModal').style.display = 'block';
+}
+
+// Confirm delete group
+async function confirmDeleteGroup() {
+    if (!currentDeleteGroupData) return;
+
+    try {
+        const response = await fetch(`/api/archives/group/${encodeURIComponent(currentDeleteGroupData.groupName)}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Group deleted successfully', 'success');
+            loadArchives();
+        } else {
+            showNotification(result.message, 'error');
+        }
+
+    } catch (error) {
+        console.error('Error deleting group:', error);
+        showNotification('Failed to delete group', 'error');
+    } finally {
+        closeDeleteGroupModal();
+    }
+}
+
+// Close delete group modal
+function closeDeleteGroupModal() {
+    document.getElementById('deleteGroupModal').style.display = 'none';
+    currentDeleteGroupData = null;
 }
 
 // Show overwrite modal
-function showOverwriteModal(problemData) {
-    currentProblemData = problemData;
+function showOverwriteModal() {
     document.getElementById('overwriteModal').style.display = 'block';
 }
 
@@ -400,12 +549,20 @@ function escapeHtml(text) {
 window.onclick = function (event) {
     const deleteModal = document.getElementById('deleteModal');
     const overwriteModal = document.getElementById('overwriteModal');
+    const renameGroupModal = document.getElementById('renameGroupModal');
+    const deleteGroupModal = document.getElementById('deleteGroupModal');
 
     if (event.target === deleteModal) {
         closeDeleteModal();
     }
     if (event.target === overwriteModal) {
         closeOverwriteModal();
+    }
+    if (event.target === renameGroupModal) {
+        closeRenameGroupModal();
+    }
+    if (event.target === deleteGroupModal) {
+        closeDeleteGroupModal();
     }
 }
 
