@@ -27,7 +27,7 @@ class ProblemParserServer {
     private val comparisonService = OutputComparisonService(matchedTestTracker)
     private val testCaseService = TestCaseService(fileService)
     private val archiveService = ArchiveService(fileService)
-    private val problemRoutes = ProblemRoutes(requestManager, problemService, comparisonService, testCaseService, archiveService)
+    private val problemRoutes = ProblemRoutes(requestManager, problemService, comparisonService, testCaseService, archiveService, fileService)
 
     fun start() {
         embeddedServer(Netty, port = ServerConfig.PORT, host = ServerConfig.LOCALHOST) {

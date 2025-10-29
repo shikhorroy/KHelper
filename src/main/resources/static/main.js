@@ -65,7 +65,7 @@ function handleRequest(id, accept) {
     const message = accept ? 'Problem Accepted!' : 'Problem Rejected!';
     const type = accept ? 'success' : 'error';
 
-    fetch('/' + action + '/' + id, { method: 'POST' })
+    fetch('/' + action + '/' + id, {method: 'POST'})
         .then(response => {
             if (response.ok) {
                 showToast(message, type);
@@ -173,6 +173,15 @@ async function loadPendingRequests() {
     }
 }
 
+// Keyboard shortcut for Clear All (Ctrl+Shift+D)
+document.addEventListener('keydown', (event) => {
+    // Check for Ctrl+Shift+D
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        event.preventDefault();
+        clearAllFiles();
+    }
+});
+
 // Load pending requests on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadPendingRequests();
@@ -185,6 +194,103 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('beforeunload', () => {
     if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
+    }
+});
+
+// Clear all files and folders to initial state - show modal
+function clearAllFiles() {
+    document.getElementById('clearAllModal').style.display = 'block';
+}
+
+// Close clear all modal
+function closeClearAllModal() {
+    document.getElementById('clearAllModal').style.display = 'none';
+}
+
+// Select all items in clear modal
+function selectAllClearItems() {
+    document.getElementById('clearTestInputs').checked = true;
+    document.getElementById('clearTestOutputs').checked = true;
+    document.getElementById('clearActualOutputs').checked = true;
+    document.getElementById('clearMatchedTests').checked = true;
+    document.getElementById('clearProblemMeta').checked = true;
+    document.getElementById('clearSingleFiles').checked = true;
+}
+
+// Deselect all items in clear modal
+function deselectAllClearItems() {
+    document.getElementById('clearTestInputs').checked = false;
+    document.getElementById('clearTestOutputs').checked = false;
+    document.getElementById('clearActualOutputs').checked = false;
+    document.getElementById('clearMatchedTests').checked = false;
+    document.getElementById('clearProblemMeta').checked = false;
+    document.getElementById('clearSingleFiles').checked = false;
+}
+
+// Confirm and execute clear all
+async function confirmClearAll() {
+    const options = {
+        clearTestInputs: document.getElementById('clearTestInputs').checked,
+        clearTestOutputs: document.getElementById('clearTestOutputs').checked,
+        clearActualOutputs: document.getElementById('clearActualOutputs').checked,
+        clearMatchedTests: document.getElementById('clearMatchedTests').checked,
+        clearProblemMeta: document.getElementById('clearProblemMeta').checked,
+        clearSingleFiles: document.getElementById('clearSingleFiles').checked
+    };
+
+    // Check if at least one item is selected
+    const hasSelection = Object.values(options).some(v => v);
+    if (!hasSelection) {
+        showToast('Please select at least one item to delete', 'error');
+        return;
+    }
+
+    // Close modal
+    closeClearAllModal();
+
+    try {
+        const response = await fetch('/api/clear-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(options)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const deletedCount = result.deletedItems.length;
+            const message = deletedCount > 0
+                ? `Successfully cleared ${deletedCount} item(s)`
+                : 'Selected items were already clean - nothing to delete';
+
+            showToast(message, 'success');
+
+            // Show detailed info in console
+            console.log('🗑️ Clear All Results:');
+            console.log('  Success:', result.success);
+            console.log('  Message:', result.message);
+            console.log('  Deleted items:', result.deletedItems);
+
+            // Reload page after 2 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing files:', error);
+        showToast('Network error: ' + error.message, 'error');
+    }
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('clearAllModal');
+    if (event.target === modal) {
+        closeClearAllModal();
     }
 });
 
