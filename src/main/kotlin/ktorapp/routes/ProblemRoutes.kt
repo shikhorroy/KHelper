@@ -12,6 +12,7 @@ import ktorapp.models.PendingRequest
 import ktorapp.models.Problem
 import ktorapp.services.*
 import ktorapp.services.GroupRenameRequest
+import ktorapp.services.ClearAllOptions
 import java.nio.file.Path
 import java.util.*
 
@@ -20,7 +21,8 @@ class ProblemRoutes(
     private val problemService: ProblemService,
     private val comparisonService: OutputComparisonService,
     private val testCaseService: TestCaseService,
-    private val archiveService: ArchiveService
+    private val archiveService: ArchiveService,
+    private val fileService: FileService
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -327,6 +329,18 @@ class ProblemRoutes(
         post("/api/archives/group/rename") {
             val request = call.receive<GroupRenameRequest>()
             val response = archiveService.renameGroup(request.oldGroupName, request.newGroupName)
+            call.respond(response)
+        }
+
+        // Clear all files and folders to initial state
+        post("/api/clear-all") {
+            val options = try {
+                call.receive<ClearAllOptions>()
+            } catch (_: Exception) {
+                // If no body provided, use default (all selected)
+                ClearAllOptions()
+            }
+            val response = fileService.clearAll(options)
             call.respond(response)
         }
     }
