@@ -14,7 +14,7 @@ powerful features like output comparison, test case tracking, and batch executio
 
 This project has **three main components**, each serving a specific purpose in your competitive programming workflow:
 
-### 1️⃣ **CompetitiveCompanionListener.kt** - Problem Parser Server
+### 1️⃣ **Main.kt** - Problem Parser Server
 
 **Purpose:** Listens for problems from Competitive Companion browser extension  
 **When to run:** Start this FIRST before parsing any problems  
@@ -37,7 +37,7 @@ fun main() {
 
 ---
 
-### 2️⃣ **LocalhostSolver.kt** - Local Test Runner
+### 2️⃣ **Runner.kt** - Local Test Runner
 
 **Purpose:** Runs your solution against test cases locally  
 **When to run:** After writing your solution, to test it  
@@ -47,7 +47,7 @@ fun main() {
 // Entry point: Runs batch tests locally
 fun main() {
     // Automatically detects and runs all test files
-    // Uses solve() function from Solver.kt
+    // Uses solve() function from Solution.kt
 }
 ```
 
@@ -61,7 +61,7 @@ fun main() {
 
 ---
 
-### 3️⃣ **Solver.kt** - Your Solution (For Submission)
+### 3️⃣ **Solution.kt** - Your Solution (For Submission)
 
 **Purpose:** Contains your actual CP solution - THIS IS WHAT YOU SUBMIT  
 **When to edit:** Write your solution logic here  
@@ -105,7 +105,7 @@ fun main() {
 ┌─────────────────────────────────────────────────────────────┐
 │  1️⃣  START THE SERVER                                       │
 │  ./gradlew run                                              │
-│  (Runs CompetitiveCompanionListener.kt)                     │
+│  (Runs Main.kt)                                             │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -118,14 +118,14 @@ fun main() {
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  3️⃣  WRITE SOLUTION                                         │
-│  • Edit Solver.kt                                           │
+│  • Edit Solution.kt                                         │
 │  • Implement logic in solve() function                      │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  4️⃣  TEST LOCALLY                                           │
 │  ./gradlew runSolver                                        │
-│  (Runs LocalhostSolver.kt)                                  │
+│  (Runs Runner.kt)                                           │
 │  → Generates outputs in output/ folder                      │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -138,7 +138,7 @@ fun main() {
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  6️⃣  FIX & RETEST                                           │
-│  • Fix bugs in Solver.kt                                    │
+│  • Fix bugs in Solution.kt                                  │
 │  • Run: ./gradlew runSolver                                 │
 │  • Only failed tests run (smart tracking!)                  │
 │  • Repeat until all tests pass ✅                           │
@@ -146,7 +146,7 @@ fun main() {
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  7️⃣  SUBMIT                                                 │
-│  • Copy entire Solver.kt file                               │
+│  • Copy entire Solution.kt file                             │
 │  • Paste to online judge                                    │
 │  • Submit and get AC! 🎉                                    │
 └─────────────────────────────────────────────────────────────┘
@@ -313,6 +313,7 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
+- **AI Agent** - Built with assistance from AI-powered development tools
 - **Competitive Companion** - Browser extension for problem parsing
 - **Ktor** - Modern Kotlin web framework
 - **Kotlin** - Programming language

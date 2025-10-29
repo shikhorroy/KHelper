@@ -24,9 +24,17 @@ data class ArchivedProblem(
 )
 
 @Serializable
+data class GroupedArchive(
+    val groupName: String,
+    val problems: List<ArchivedProblem>,
+    val problemCount: Int
+)
+
+@Serializable
 data class ArchiveListResponse(
-    val archives: List<ArchivedProblem>,
-    val count: Int
+    val groups: List<GroupedArchive>,
+    val totalProblems: Int,
+    val totalGroups: Int
 )
 
 @Serializable
@@ -34,6 +42,12 @@ data class ArchiveResponse(
     val success: Boolean,
     val message: String,
     val archiveId: String? = null
+)
+
+@Serializable
+data class GroupRenameRequest(
+    val oldGroupName: String,
+    val newGroupName: String
 )
 
 class ArchiveService(
@@ -52,12 +66,15 @@ class ArchiveService(
     }
 
     /**
-     * Archive the current problem with its test cases and Solver.kt
+     * Archive the current problem with its test cases and Solution.kt
      */
     suspend fun archiveProblem(problem: Problem, overwrite: Boolean = false): ArchiveResponse {
         val problemName = problem.name ?: "Unknown Problem"
+        val groupName = problem.group?.takeIf { it.isNotBlank() } ?: "Ungrouped"
+
         val archiveId = generateArchiveId(problemName)
-        val archivePath = archiveDir.resolve(archiveId)
+        val groupPath = archiveDir.resolve(sanitizeGroupName(groupName))
+        val archivePath = groupPath.resolve(archiveId)
 
         // Check if archive already exists
         if (Files.exists(archivePath) && !overwrite) {
@@ -69,7 +86,7 @@ class ArchiveService(
         }
 
         try {
-            // Create archive directory
+            // Create group and archive directories
             Files.createDirectories(archivePath)
 
             // Create subdirectories
@@ -98,10 +115,10 @@ class ArchiveService(
                 }
             }
 
-            // Copy Solver.kt
-            val solverFile = baseDir.resolve("src/main/kotlin/Solver.kt")
-            if (Files.exists(solverFile)) {
-                Files.copy(solverFile, archivePath.resolve("Solver.kt"), StandardCopyOption.REPLACE_EXISTING)
+            // Copy Solution.kt
+            val solutionFile = baseDir.resolve("src/main/kotlin/Solution.kt")
+            if (Files.exists(solutionFile)) {
+                Files.copy(solutionFile, archivePath.resolve("Solution.kt"), StandardCopyOption.REPLACE_EXISTING)
             }
 
             // Save problem metadata
@@ -139,25 +156,35 @@ class ArchiveService(
     }
 
     /**
-     * Get list of all archived problems
+     * Get list of all archived problems grouped by their groups
      */
     fun listArchives(): ArchiveListResponse {
-        val archives = mutableListOf<ArchivedProblem>()
+        val groupedArchives = mutableMapOf<String, MutableList<ArchivedProblem>>()
 
         try {
             if (Files.exists(archiveDir)) {
-                Files.list(archiveDir).use { dirs ->
-                    dirs.forEach { dir ->
-                        if (Files.isDirectory(dir)) {
-                            val metadataFile = dir.resolve("metadata.json")
-                            if (Files.exists(metadataFile)) {
-                                try {
-                                    val metadata = json.decodeFromString<ArchivedProblem>(
-                                        Files.readString(metadataFile)
-                                    )
-                                    archives.add(metadata)
-                                } catch (e: Exception) {
-                                    println("⚠️ Error reading archive metadata: ${dir.fileName}")
+                // Iterate through group directories
+                Files.list(archiveDir).use { groupDirs ->
+                    groupDirs.forEach { groupDir ->
+                        if (Files.isDirectory(groupDir)) {
+                            // Iterate through problem directories in this group
+                            Files.list(groupDir).use { problemDirs ->
+                                problemDirs.forEach { problemDir ->
+                                    if (Files.isDirectory(problemDir)) {
+                                        val metadataFile = problemDir.resolve("metadata.json")
+                                        if (Files.exists(metadataFile)) {
+                                            try {
+                                                val metadata = json.decodeFromString<ArchivedProblem>(
+                                                    Files.readString(metadataFile)
+                                                )
+                                                groupedArchives
+                                                    .getOrPut(metadata.group.ifBlank { "Ungrouped" }) { mutableListOf() }
+                                                    .add(metadata)
+                                            } catch (_: Exception) {
+                                                println("⚠️ Error reading archive metadata: ${problemDir.fileName}")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -165,21 +192,34 @@ class ArchiveService(
                 }
             }
 
-            // Sort by archived date (newest first)
-            archives.sortByDescending { it.archivedAt }
-
-        } catch (e: Exception) {
-            println("❌ Error listing archives: ${e.message}")
+        } catch (_: Exception) {
+            println("❌ Error listing archives")
         }
 
-        return ArchiveListResponse(archives, archives.size)
+        val groups = groupedArchives.map { (groupName, problems) ->
+            problems.sortByDescending { it.archivedAt }
+            GroupedArchive(
+                groupName = groupName,
+                problems = problems,
+                problemCount = problems.size
+            )
+        }.sortedBy { it.groupName }
+
+        val totalProblems = groups.sumOf { it.problemCount }
+
+        return ArchiveListResponse(
+            groups = groups,
+            totalProblems = totalProblems,
+            totalGroups = groups.size
+        )
     }
 
     /**
      * Import an archived problem
      */
-    suspend fun importArchive(archiveId: String): ArchiveResponse {
-        val archivePath = archiveDir.resolve(archiveId)
+    suspend fun importArchive(archiveId: String, groupName: String): ArchiveResponse {
+        val groupPath = archiveDir.resolve(sanitizeGroupName(groupName))
+        val archivePath = groupPath.resolve(archiveId)
 
         if (!Files.exists(archivePath)) {
             return ArchiveResponse(
@@ -231,11 +271,11 @@ class ArchiveService(
                 }
             }
 
-            // Restore Solver.kt
-            val archivedSolver = archivePath.resolve("Solver.kt")
-            val currentSolver = baseDir.resolve("src/main/kotlin/Solver.kt")
-            if (Files.exists(archivedSolver)) {
-                Files.copy(archivedSolver, currentSolver, StandardCopyOption.REPLACE_EXISTING)
+            // Restore Solution.kt
+            val archivedSolution = archivePath.resolve("Solution.kt")
+            val currentSolution = baseDir.resolve("src/main/kotlin/Solution.kt")
+            if (Files.exists(archivedSolution)) {
+                Files.copy(archivedSolution, currentSolution, StandardCopyOption.REPLACE_EXISTING)
             }
 
             // Save problem metadata
@@ -268,8 +308,9 @@ class ArchiveService(
     /**
      * Delete an archived problem
      */
-    fun deleteArchive(archiveId: String): ArchiveResponse {
-        val archivePath = archiveDir.resolve(archiveId)
+    fun deleteArchive(archiveId: String, groupName: String): ArchiveResponse {
+        val groupPath = archiveDir.resolve(sanitizeGroupName(groupName))
+        val archivePath = groupPath.resolve(archiveId)
 
         if (!Files.exists(archivePath)) {
             return ArchiveResponse(
@@ -283,6 +324,15 @@ class ArchiveService(
             Files.walk(archivePath)
                 .sorted(Comparator.reverseOrder())
                 .forEach { Files.deleteIfExists(it) }
+
+            // Check if group directory is empty and delete it
+            if (Files.exists(groupPath)) {
+                val isEmpty = Files.list(groupPath).use { it.count() == 0L }
+                if (isEmpty) {
+                    Files.deleteIfExists(groupPath)
+                    println("✅ Empty group deleted: $groupName")
+                }
+            }
 
             println("✅ Archive deleted: $archiveId")
 
@@ -301,6 +351,109 @@ class ArchiveService(
     }
 
     /**
+     * Delete an entire group and all its problems
+     */
+    fun deleteGroup(groupName: String): ArchiveResponse {
+        val groupPath = archiveDir.resolve(sanitizeGroupName(groupName))
+
+        if (!Files.exists(groupPath)) {
+            return ArchiveResponse(
+                success = false,
+                message = "Group not found: $groupName"
+            )
+        }
+
+        try {
+            // Delete the group directory recursively
+            Files.walk(groupPath)
+                .sorted(Comparator.reverseOrder())
+                .forEach { Files.deleteIfExists(it) }
+
+            println("✅ Group deleted: $groupName")
+
+            return ArchiveResponse(
+                success = true,
+                message = "Group deleted successfully"
+            )
+
+        } catch (e: Exception) {
+            println("❌ Error deleting group: ${e.message}")
+            return ArchiveResponse(
+                success = false,
+                message = "Error deleting group: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Rename a group
+     */
+    suspend fun renameGroup(oldGroupName: String, newGroupName: String): ArchiveResponse {
+        if (oldGroupName.isBlank() || newGroupName.isBlank()) {
+            return ArchiveResponse(
+                success = false,
+                message = "Group names cannot be empty"
+            )
+        }
+
+        val oldGroupPath = archiveDir.resolve(sanitizeGroupName(oldGroupName))
+        val newGroupPath = archiveDir.resolve(sanitizeGroupName(newGroupName))
+
+        if (!Files.exists(oldGroupPath)) {
+            return ArchiveResponse(
+                success = false,
+                message = "Group not found: $oldGroupName"
+            )
+        }
+
+        if (Files.exists(newGroupPath)) {
+            return ArchiveResponse(
+                success = false,
+                message = "Group already exists: $newGroupName"
+            )
+        }
+
+        try {
+            // Move the directory
+            Files.move(oldGroupPath, newGroupPath)
+
+            // Update metadata in all problems
+            val problemDirs = Files.list(newGroupPath).use { it.toList() }
+            for (problemDir in problemDirs) {
+                if (Files.isDirectory(problemDir)) {
+                    val metadataFile = problemDir.resolve("metadata.json")
+                    if (Files.exists(metadataFile)) {
+                        try {
+                            val metadata = json.decodeFromString<ArchivedProblem>(
+                                Files.readString(metadataFile)
+                            )
+                            val updatedMetadata = metadata.copy(group = newGroupName)
+                            val updatedJson = json.encodeToString(updatedMetadata)
+                            fileService.writeFile(metadataFile, updatedJson)
+                        } catch (_: Exception) {
+                            println("⚠️ Error updating metadata for: ${problemDir.fileName}")
+                        }
+                    }
+                }
+            }
+
+            println("✅ Group renamed: $oldGroupName → $newGroupName")
+
+            return ArchiveResponse(
+                success = true,
+                message = "Group renamed successfully"
+            )
+
+        } catch (e: Exception) {
+            println("❌ Error renaming group: ${e.message}")
+            return ArchiveResponse(
+                success = false,
+                message = "Error renaming group: ${e.message}"
+            )
+        }
+    }
+
+    /**
      * Generate a unique archive ID from problem name
      */
     private fun generateArchiveId(problemName: String): String {
@@ -312,6 +465,18 @@ class ArchiveService(
 
         val timestamp = System.currentTimeMillis()
         return "${sanitized}_$timestamp"
+    }
+
+    /**
+     * Sanitize group name for file system
+     */
+    private fun sanitizeGroupName(groupName: String): String {
+        return groupName
+            .replace(Regex("[^a-zA-Z0-9-_ ]"), "_")
+            .replace(Regex("_+"), "_")
+            .trim('_')
+            .take(100)
+            .ifBlank { "Ungrouped" }
     }
 }
 

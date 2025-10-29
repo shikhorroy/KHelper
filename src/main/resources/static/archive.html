@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🇰Helper - Problem Archives</title>
+    <title>KHelper - Problem Archives</title>
     <link rel="stylesheet" href="/styles.css">
     <style>
         .archive-container {
@@ -17,7 +17,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
-            border-bottom: 2px solid #2196F3;
+            border-bottom: 2px solid var(--accent);
             padding-bottom: 15px;
         }
 
@@ -28,22 +28,31 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 15px 25px;
-            border-radius: 8px;
-            color: white;
-            min-width: 150px;
+            color: var(--bg-primary);
+            padding: 20px 30px;
+            border-radius: 12px;
+            min-width: 160px;
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px var(--shadow-hover);
         }
 
         .stat-card h3 {
             margin: 0;
-            font-size: 32px;
-            font-weight: bold;
+            font-size: 36px;
+            font-weight: 700;
+            text-align: center;
         }
 
         .stat-card p {
-            margin: 5px 0 0 0;
-            opacity: 0.9;
+            margin: 8px 0 0 0;
+            opacity: 0.8;
+            font-size: 14px;
+            font-weight: 600;
         }
 
         .archive-list {
@@ -52,16 +61,16 @@
         }
 
         .archive-item {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
             padding: 20px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px var(--shadow);
         }
 
         .archive-item:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 16px var(--shadow-hover);
             transform: translateY(-2px);
         }
 
@@ -78,12 +87,13 @@
 
         .archive-title h3 {
             margin: 0 0 5px 0;
-            color: #333;
+            color: var(--text-primary);
             font-size: 18px;
+            font-weight: 600;
         }
 
         .archive-group {
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
             margin: 0;
         }
@@ -92,7 +102,7 @@
             display: flex;
             gap: 20px;
             margin: 10px 0;
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
         }
 
@@ -103,7 +113,7 @@
         }
 
         .archive-url {
-            color: #2196F3;
+            color: var(--accent);
             text-decoration: none;
             font-size: 13px;
             display: block;
@@ -111,10 +121,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            opacity: 0.8;
         }
 
         .archive-url:hover {
             text-decoration: underline;
+            opacity: 1;
         }
 
         .archive-actions {
@@ -125,54 +137,61 @@
         .btn {
             padding: 8px 16px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
             transition: all 0.2s;
         }
 
         .btn-import {
-            background: #4CAF50;
+            background: var(--success);
             color: white;
         }
 
         .btn-import:hover {
-            background: #45a049;
+            background: #218838;
+            transform: translateY(-1px);
         }
 
         .btn-delete {
-            background: #f44336;
+            background: var(--error);
             color: white;
         }
 
         .btn-delete:hover {
-            background: #da190b;
+            background: #c82333;
+            transform: translateY(-1px);
         }
 
         .btn-back {
-            background: #757575;
-            color: white;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
         }
 
         .btn-back:hover {
-            background: #616161;
+            background: var(--border-color);
+            transform: translateY(-1px);
         }
 
         .btn-archive-current {
-            background: #2196F3;
-            color: white;
+            background: var(--accent);
+            color: var(--bg-primary);
             padding: 12px 24px;
             font-size: 16px;
+            font-weight: 700;
         }
 
         .btn-archive-current:hover {
-            background: #0b7dda;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-hover);
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            color: var(--text-tertiary);
         }
 
         .empty-state svg {
@@ -182,39 +201,47 @@
             opacity: 0.3;
         }
 
+        .empty-state h2 {
+            color: var(--text-secondary);
+        }
+
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 2000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
         }
 
         .modal-content {
-            background-color: white;
+            background-color: var(--card-bg);
             margin: 15% auto;
-            padding: 30px;
-            border-radius: 8px;
+            padding: 32px;
+            border-radius: 16px;
             width: 80%;
             max-width: 500px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
         }
 
         .modal-header {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .modal-header h2 {
             margin: 0;
-            color: #333;
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         .modal-body {
-            margin-bottom: 20px;
-            color: #666;
+            margin-bottom: 24px;
+            color: var(--text-secondary);
+            line-height: 1.6;
         }
 
         .modal-actions {
@@ -243,15 +270,16 @@
 
         .notification {
             position: fixed;
-            top: 20px;
+            top: 80px;
             right: 20px;
-            padding: 15px 20px;
-            border-radius: 4px;
+            padding: 16px 24px;
+            border-radius: 12px;
             color: white;
-            font-weight: 500;
+            font-weight: 600;
             z-index: 2000;
             animation: slideIn 0.3s ease;
             max-width: 400px;
+            box-shadow: 0 4px 20px var(--shadow-hover);
         }
 
         @keyframes slideIn {
@@ -266,15 +294,243 @@
         }
 
         .notification.success {
-            background: #4CAF50;
+            background: var(--success);
         }
 
         .notification.error {
-            background: #f44336;
+            background: var(--error);
         }
 
         .notification.warning {
-            background: #ff9800;
+            background: var(--warning);
+            color: #000;
+        }
+
+        .group-container {
+            margin-bottom: 25px;
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--card-bg);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .group-header {
+            padding: 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .group-header:hover {
+            opacity: 0.9;
+        }
+
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .group-toggle {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .group-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .group-info h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .group-info p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-group-action {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 8px 16px;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] .btn-group-action {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-group-action:hover {
+            transform: translateY(-1px);
+        }
+
+        [data-theme="dark"] .btn-group-action:hover {
+            transform: translateY(-1px);
+        }
+
+        .group-problems {
+            display: none;
+            padding: 20px;
+            background: var(--bg-secondary);
+        }
+
+        .group-problems.expanded {
+            display: block;
+        }
+
+        .problem-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--shadow);
+        }
+
+        .current-problem-section {
+            display: none;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .current-problem-header {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .current-problem-subtitle {
+            margin: 0 0 16px 0;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .current-problem-details {
+            background: rgb(122 122 122 / 10%);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        [data-theme="dark"] .current-problem-details {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .current-problem-name {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .current-problem-group {
+            margin: 0 0 12px 0;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .current-problem-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .current-problem-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .current-problem-url {
+            color: inherit;
+            text-decoration: none;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.9;
+        }
+
+        .current-problem-url:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .no-problem-section {
+            display: none;
+            background: var(--warning);
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            color: #000;
+        }
+
+        .no-problem-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .no-problem-icon {
+            font-size: 28px;
+        }
+
+        .no-problem-text strong {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .no-problem-text p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
         }
     </style>
 </head>
@@ -283,7 +539,7 @@
 <nav class="navbar">
     <div class="nav-container">
         <a href="/" class="nav-brand">
-            🇰Helper
+            KHelper
         </a>
         <ul class="nav-menu" id="navMenu">
             <li class="nav-item">
@@ -306,6 +562,11 @@
                     📚 Archives
                 </a>
             </li>
+            <li class="nav-item">
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </li>
         </ul>
     </div>
 </nav>
@@ -323,60 +584,60 @@
     </div>
 
     <!-- Current Problem Section -->
-    <div id="currentProblemSection" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px; margin-bottom: 20px; color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div style="flex: 1;">
-                <h2 style="margin: 0 0 5px 0; font-size: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>📝</span>
-                    <span>Current Problem</span>
-                </h2>
-                <p style="margin: 0 0 15px 0; opacity: 0.9; font-size: 14px;">This is the problem that will be archived</p>
-                <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 6px; backdrop-filter: blur(10px);">
-                    <h3 id="currentProblemName" style="margin: 0 0 8px 0; font-size: 18px;">-</h3>
-                    <p id="currentProblemGroup" style="margin: 0 0 10px 0; opacity: 0.9; font-size: 14px;">-</p>
-                    <div style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 13px;">
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <span>⏱️</span>
-                            <span id="currentProblemTime">-</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <span>💾</span>
-                            <span id="currentProblemMemory">-</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <span>🧪</span>
-                            <span id="currentProblemTests">-</span>
-                        </div>
-                    </div>
-                    <a id="currentProblemUrl" href="#" target="_blank" style="color: white; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; opacity: 0.9;">
-                        <span>🔗</span>
-                        <span style="text-decoration: underline;">View Problem</span>
-                    </a>
+    <div id="currentProblemSection" class="current-problem-section">
+        <h2 class="current-problem-header">
+            <span>📝</span>
+            <span>Current Problem</span>
+        </h2>
+        <p class="current-problem-subtitle">This is the problem that will be archived</p>
+        <div class="current-problem-details">
+            <h3 id="currentProblemName" class="current-problem-name">-</h3>
+            <p id="currentProblemGroup" class="current-problem-group">-</p>
+            <div class="current-problem-stats">
+                <div class="current-problem-stat">
+                    <span>⏱️</span>
+                    <span id="currentProblemTime">-</span>
+                </div>
+                <div class="current-problem-stat">
+                    <span>💾</span>
+                    <span id="currentProblemMemory">-</span>
+                </div>
+                <div class="current-problem-stat">
+                    <span>🧪</span>
+                    <span id="currentProblemTests">-</span>
                 </div>
             </div>
+            <a id="currentProblemUrl" href="#" target="_blank" class="current-problem-url">
+                <span>🔗</span>
+                <span>View Problem</span>
+            </a>
         </div>
     </div>
 
     <!-- No Current Problem Message -->
-    <div id="noProblemSection" style="display: none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 24px;">⚠️</span>
-            <div>
+    <div id="noProblemSection" class="no-problem-section">
+        <div class="no-problem-content">
+            <span class="no-problem-icon">⚠️</span>
+            <div class="no-problem-text">
                 <strong>No Current Problem Loaded</strong>
-                <p style="margin: 5px 0 0 0; font-size: 14px;">Please load a problem from Competitive Companion or import an archive to start archiving.</p>
+                <p>Please load a problem from Competitive Companion or import an archive to start archiving.</p>
             </div>
         </div>
     </div>
 
     <div class="archive-stats" id="stats">
         <div class="stat-card">
-            <h3 id="archiveCount">0</h3>
-            <p>Total Archives</p>
+            <h3 id="groupCount">0</h3>
+            <p>Total Groups</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="problemCount">0</h3>
+            <p>Total Problems</p>
         </div>
     </div>
 
-    <div class="archive-list" id="archiveList">
-        <!-- Archives will be loaded here -->
+    <div id="groupsList">
+        <!-- Groups will be loaded here -->
     </div>
 
     <div class="empty-state" id="emptyState" style="display: none;">
@@ -418,6 +679,48 @@
         <div class="modal-actions">
             <button class="btn btn-cancel" onclick="closeOverwriteModal()">Cancel</button>
             <button class="btn btn-confirm" onclick="confirmOverwrite()">Overwrite</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Group Modal -->
+<div id="renameGroupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>✏️ Rename Group</h2>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label>Current Name:</label>
+                <input type="text" id="currentGroupName" readonly>
+            </div>
+            <div class="input-group">
+                <label>New Name:</label>
+                <input type="text" id="newGroupName" placeholder="Enter new group name">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeRenameGroupModal()">Cancel</button>
+            <button class="btn btn-confirm" style="background: #2196F3;" onclick="confirmRenameGroup()">Rename</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Group Modal -->
+<div id="deleteGroupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚠️ Confirm Delete Group</h2>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete this entire group and all its problems?</p>
+            <p><strong id="deleteGroupName"></strong></p>
+            <p style="color: #f44336;">This will delete <strong id="deleteGroupCount"></strong> problem(s). This action
+                cannot be undone.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeDeleteGroupModal()">Cancel</button>
+            <button class="btn btn-confirm" onclick="confirmDeleteGroup()">Delete Group</button>
         </div>
     </div>
 </div>
