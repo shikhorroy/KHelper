@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "cp.kotlin.roy"
+group = "khelper.cp.roy"
 version = "1.0-SNAPSHOT"
 val ktorVersion = "3.3.1"
 val logbackVersion = "1.5.20"

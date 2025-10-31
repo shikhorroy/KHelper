@@ -11,7 +11,7 @@
 <nav class="navbar">
     <div class="nav-container">
         <a href="/" class="nav-brand">
-            KHelper
+            <span class="wave-letter">K</span><span class="wave-letter">H</span><span class="wave-letter">e</span><span class="wave-letter">l</span><span class="wave-letter">p</span><span class="wave-letter">e</span><span class="wave-letter">r</span>
         </a>
         <ul class="nav-menu" id="navMenu">
             <li class="nav-item">
@@ -39,13 +39,37 @@
                     <span id="theme-icon">🌙</span>
                 </button>
             </li>
+            <li class="nav-item">
+                <button class="shortcuts-toggle" onclick="toggleShortcutsMenu()" aria-label="View shortcuts">
+                    ⌨️
+                </button>
+            </li>
         </ul>
     </div>
 </nav>
 
+<!-- Shortcuts Menu Dropdown -->
+<div id="shortcuts-menu" class="shortcuts-menu" style="display: none;">
+    <div class="shortcuts-menu-header">
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        <button class="shortcuts-close" onclick="toggleShortcutsMenu()">✕</button>
+    </div>
+    <div class="shortcuts-list">
+        <div class="shortcut-item">
+            <kbd>A</kbd>
+            <span>Toggle animations on/off</span>
+        </div>
+        <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+            <span>Add test case</span>
+        </div>
+    </div>
+</div>
+
 <div class="container">
     <div class="test-management-header">
         <h1>🧪 Test Case Management</h1>
+
         <div class="test-summary">
             Total Test Cases: <span id="total-tests">0</span>
         </div>

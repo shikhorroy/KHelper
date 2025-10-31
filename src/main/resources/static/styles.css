@@ -22,6 +22,14 @@
     --navbar-text: #ffffff;
     --card-bg: #ffffff;
     --code-bg: #f8f9fa;
+
+    /* Theme transition animation variables (set dynamically) */
+    --orb-start-x: 50%;
+    --orb-start-y: 50%;
+    --orb-end-x: 50%;
+    --orb-end-y: 50%;
+    --toggle-x: 50%;
+    --toggle-y: 50%;
 }
 
 [data-theme="dark"] {
@@ -101,16 +109,27 @@ body {
     font-weight: 700;
     color: var(--navbar-text);
     text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-block;
     letter-spacing: -0.5px;
 }
 
 .nav-brand:hover {
     text-decoration: none;
-    opacity: 0.85;
 }
+
+.nav-brand .wave-letter {
+    display: inline-block;
+    animation: wave 1.5s ease-in-out infinite;
+    letter-spacing: normal;
+}
+
+.nav-brand .wave-letter:nth-child(1) { animation-delay: 0s; }
+.nav-brand .wave-letter:nth-child(2) { animation-delay: 0.1s; }
+.nav-brand .wave-letter:nth-child(3) { animation-delay: 0.2s; }
+.nav-brand .wave-letter:nth-child(4) { animation-delay: 0.3s; }
+.nav-brand .wave-letter:nth-child(5) { animation-delay: 0.4s; }
+.nav-brand .wave-letter:nth-child(6) { animation-delay: 0.5s; }
+.nav-brand .wave-letter:nth-child(7) { animation-delay: 0.6s; }
 
 .nav-menu {
     display: flex;
@@ -147,8 +166,9 @@ body {
     font-weight: 600;
 }
 
-/* Theme Toggle Button */
-.theme-toggle {
+/* Theme Toggle Button & Shortcuts Toggle */
+.theme-toggle,
+.shortcuts-toggle {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: var(--navbar-text);
@@ -161,11 +181,258 @@ body {
     justify-content: center;
     transition: all 0.2s ease;
     margin-left: 10px;
+    position: relative;
+    overflow: hidden;
+    width: 48px;
+    height: 40px;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.shortcuts-toggle:hover {
     background: rgba(255, 255, 255, 0.2);
     transform: scale(1.05);
+}
+
+/* Theme Toggle Icon Container */
+.theme-toggle {
+    overflow: visible;
+}
+
+#theme-icon {
+    position: relative;
+    display: block;
+    transition: none;
+    z-index: 1002;
+}
+
+/* Theme Transition Overlay - Below navbar only */
+.theme-transition-overlay {
+    position: fixed;
+    top: 60px;  /* Start below navbar */
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);  /* Fill remaining viewport height */
+    pointer-events: none;
+    z-index: 999;  /* Below navbar (navbar is z-index: 1000) */
+    display: none;
+    overflow: hidden;
+}
+
+.theme-transition-overlay.active {
+    display: block;
+}
+
+.theme-orb {
+    position: absolute;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    pointer-events: none;
+}
+
+/* Light Mode Expansion - Light wave expands from center, sun stays then vanishes */
+@keyframes lightExpand {
+    0% {
+        width: 0px;
+        height: 0px;
+        opacity: 0;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 40%, rgba(255, 255, 255, 0.5) 70%, transparent 100%);
+    }
+    10% {
+        opacity: 1;
+    }
+    100% {
+        width: 300vmax;
+        height: 300vmax;
+        opacity: 1;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 40%, rgba(255, 255, 255, 0.5) 70%, transparent 100%);
+    }
+}
+
+/* Sun icon appears in center then vanishes */
+@keyframes sunAppearVanish {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+}
+
+/* Dark Mode Contraction - Dark wave contracts from edges to center */
+@keyframes darkContract {
+    0% {
+        width: 300vmax;
+        height: 300vmax;
+        opacity: 1;
+        background: radial-gradient(circle at center, transparent 0%, rgba(13, 13, 13, 0.7) 30%, rgba(0, 0, 0, 0.85) 60%, rgba(0, 0, 0, 0.95) 100%);
+    }
+    100% {
+        width: 0px;
+        height: 0px;
+        opacity: 1;
+        background: radial-gradient(circle at center, transparent 0%, rgba(13, 13, 13, 0.7) 30%, rgba(0, 0, 0, 0.85) 60%, rgba(0, 0, 0, 0.95) 100%);
+    }
+}
+
+/* Moon icon appears in center then vanishes */
+@keyframes moonAppearVanish {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5) rotate(-30deg);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5) rotate(30deg);
+    }
+}
+
+/* Button icon fade animations */
+@keyframes iconFadeOut {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+}
+
+@keyframes iconFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Animation classes */
+.expanding-light {
+    animation: lightExpand 1s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.contracting-dark {
+    animation: darkContract 1s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.sun-appear-vanish {
+    animation: sunAppearVanish 1s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.moon-appear-vanish {
+    animation: moonAppearVanish 1s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.icon-fade-out {
+    animation: iconFadeOut 0.3s ease-out forwards;
+}
+
+.icon-fade-in {
+    animation: iconFadeIn 0.3s ease-in forwards;
+}
+
+/* Shortcuts Menu Dropdown */
+.shortcuts-menu {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+    z-index: 1001;
+    min-width: 320px;
+    animation: slideIn 0.2s ease-out;
+}
+
+.shortcuts-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.shortcuts-menu-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.shortcuts-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.shortcuts-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.shortcuts-list {
+    padding: 12px;
+}
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.shortcut-item:last-child {
+    margin-bottom: 0;
+}
+
+.shortcut-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.shortcut-item kbd {
+    margin-right: 2px;
+}
+
+.shortcut-item span {
+    color: var(--text-secondary);
+    font-size: 13px;
+    flex: 1;
+    text-align: right;
 }
 
 /* Mobile Menu Toggle */
@@ -1027,6 +1294,27 @@ kbd {
     font-weight: 600;
 }
 
+.shortcut-hint {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    box-shadow: 0 2px 8px var(--shadow);
+    animation: fadeIn 0.5s ease-out;
+    z-index: 999;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.shortcut-hint:hover {
+    opacity: 1;
+}
+
 /* ========================================
    UTILITY CLASSES
    ======================================== */
@@ -1140,6 +1428,60 @@ kbd {
 
 .fade-in {
     animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes spin360 {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinning-emoji {
+    display: inline-block;
+    animation: spin360 2s linear infinite;
+}
+
+@keyframes wave {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.loading-dots::after {
+    content: '';
+    animation: loadingDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes loadingDots {
+    0%, 25% {
+        content: '';
+    }
+    25.01%, 50% {
+        content: '.';
+    }
+    50.01%, 75% {
+        content: '..';
+    }
+    75.01%, 100% {
+        content: '...';
+    }
+}
+
+/* Disable animations when class is added */
+body.animations-disabled .spinning-emoji,
+body.animations-disabled .wave-letter,
+body.animations-disabled .loading-dots::after {
+    animation: none !important;
+}
+
+body.animations-disabled .loading-dots::after {
+    content: '...' !important;
 }
 
 /* ========================================
