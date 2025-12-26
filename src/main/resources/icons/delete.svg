@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+    <g stroke="currentColor" fill="none" stroke-width="1.2">
+        <!-- Lid handle -->
+        <rect x="5.5" y="2" width="5" height="1" rx="0.5" fill="currentColor"/>
+        <!-- Lid -->
+        <rect x="4" y="4" width="8" height="1" rx="0.5" fill="currentColor"/>
+        <!-- Bin body -->
+        <path d="M5 6h6l-0.5 7H5.5L5 6z" stroke="currentColor" fill="none"/>
+        <!-- Vertical lines in bin -->
+        <line x1="7.4" y1="7.5" x2="7.4" y2="11.5" stroke="currentColor"/>
+        <line x1="9.6" y1="7.5" x2="9.6" y2="11.5" stroke="currentColor"/>
+    </g>
+</svg>

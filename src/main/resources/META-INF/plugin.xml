@@ -1,0 +1,132 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
+    <id>com.roy.khelper</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
+    <name>KHelper</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor url="https://github.com/shikhorroy">Shikhor Kumer Roy</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <description><![CDATA[
+        <h2>KHelper - Competitive Programming Assistant for IntelliJ IDEA</h2>
+        <p>A powerful plugin that automates setup, testing, and submission for Kotlin/Java programmers, inspired by CHelper.</p>
+
+        <h3>Key Features:</h3>
+        <ul>
+            <li><b>One Click Problem Import:</b> Works seamlessly with the <b>Competitive Companion</b> browser extension to bring problems directly into your IDE.</li>
+            <li><b>Automatic Code Setup:</b> Instantly generates solution files with your preferred template, no more manual file creation or boilerplate copying and pasting.</li>
+            <li><b>Focus on Solving:</b> With just clicks, eliminate repetitive manual work and concentrate on what matters - solving problems.</li>
+            <li><b>Accident Proof:</b> Detects if a solution file already exists and asks for your permission before overwriting, keeping your hard work safe.</li>
+            <li><b>Instant Testing & Debugging:</b> Automatically sets up IntelliJ Run Configurations so you can run or debug against sample test cases with a single click.</li>
+            <li><b>Test Management:</b> Add and manage custom test cases easily and conveniently.</li>
+            <li><b>Easy Submission:</b> Copy your solution source code with one click or select it directly for submission.</li>
+            <li><b>Theme Support>/b>: Toggle between light and dark themes effortlessly.</li>
+        </ul>
+
+        <h3>How to Use:</h3>
+        <ol>
+            <li>Install <b>Competitive Companion</b> browser extension.</li>
+            <li>Navigate to a problem (e.g. Codeforces, AtCoder) and click the extension button.</li>
+            <li>Start coding in the automatically opened file.</li>
+            <li>Use the generated <b>Run Configuration</b> to test your solution.</li>
+            <li>Copy submission-ready code.</li>
+        </ol>
+    ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends optional="true" config-file="META-INF/k2-support.xml">org.jetbrains.kotlin</depends>
+
+    <resource-bundle>messages.MyMessageBundle</resource-bundle>
+
+    <!-- Application-level services -->
+    <applicationListeners>
+        <listener class="com.roy.khelper.server.ServerStartupListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
+    </applicationListeners>
+
+    <!-- Extensions defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Project Startup Activity -->
+        <postStartupActivity implementation="com.roy.khelper.listeners.KHelperProjectActivity"/>
+
+        <!-- Tool Window -->
+        <toolWindow id="KHelper"
+                    factoryClass="com.roy.khelper.ui.toolwindow.ProblemToolWindowFactory"
+                    icon="/icons/pluginIcon.svg"
+                    anchor="right"/>
+
+        <!-- Run Configuration -->
+        <configurationType implementation="com.roy.khelper.runner.KSolutionConfigurationType"/>
+        <programRunner implementation="com.roy.khelper.runner.KSolutionProgramRunner"/>
+
+        <!-- Settings Page -->
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.roy.khelper.settings.PluginConfigurable"
+                id="com.roy.khelper.settings.PluginConfigurable"
+                displayName="KHelper"/>
+
+        <!-- Application Services -->
+        <applicationService serviceImplementation="com.roy.khelper.server.CompetitiveCompanionServer"/>
+        <applicationService serviceImplementation="com.roy.khelper.settings.PluginSettings"/>
+
+        <!-- Project Services -->
+        <projectService serviceImplementation="com.roy.khelper.services.ProblemManagerService"/>
+
+        <!-- Notifications -->
+        <notificationGroup id="KHelper Notifications" displayType="BALLOON"/>
+    </extensions>
+
+    <!-- Actions -->
+    <actions>
+        <group id="KHelper.ActionGroup" text="KHelper" popup="true" icon="/icons/pluginIcon.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <action id="KHelper.CopySubmission"
+                    class="com.roy.khelper.ui.actions.CopySubmissionAction"
+                    text="Copy Submission Code"
+                    icon="/icons/copy.svg"
+                    description="Copy submission-ready code to clipboard">
+            </action>
+
+            <action id="KHelper.OpenProblemUrl"
+                    class="com.roy.khelper.ui.actions.OpenProblemUrlAction"
+                    text="Open Problem in Browser"
+                    icon="/icons/browser.svg"
+                    description="Open the problem URL in web browser">
+            </action>
+
+            <action id="KHelper.DeleteProblem"
+                    class="com.roy.khelper.ui.actions.DeleteProblemMenuAction"
+                    text="Delete Problem"
+                    icon="/icons/delete.svg"
+                    description="Delete the selected problem and all related files">
+            </action>
+
+            <action id="KHelper.OpenSource"
+                    class="com.roy.khelper.ui.actions.OpenSourceAction"
+                    text="Open Source Code"
+                    icon="/icons/open.svg"
+                    description="Open the solution file in the editor">
+            </action>
+
+            <separator/>
+
+            <action id="KHelper.OpenSettings"
+                    class="com.roy.khelper.ui.actions.OpenSettingsAction"
+                    text="Settings"
+                    icon="/icons/settings.svg"
+                    description="Configure KHelper settings">
+            </action>
+        </group>
+    </actions>
+</idea-plugin>

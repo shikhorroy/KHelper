@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <supportsKotlinPluginMode supportsK2="true"/>
+    </extensions>
+</idea-plugin>
