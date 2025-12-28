@@ -1,3 +1,40 @@
+<p align="center">
+  <picture>
+    <source
+      srcset="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon_dark.svg"
+      media="(prefers-color-scheme: dark)"
+    />
+    <source
+      srcset="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon.svg"
+      media="(prefers-color-scheme: light)"
+    />
+    <img
+      src="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon.svg"
+      alt="KHelper Plugin Icon"
+      width="200"
+    />
+  </picture>
+</p>
+
+<h1 align="center">KHelper</h1>
+
+<p align="center">
+  <strong>Competitive Programming Plugin for IntelliJ IDEA</strong>
+</p>
+
+<p align="center">
+  Automates setup, testing, and submission - so you can focus purely on problem-solving.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Language-Kotlin-blueviolet" />
+  <img src="https://img.shields.io/badge/Language-Java-red" />
+  <img src="https://img.shields.io/badge/IntelliJ%20IDEA-Compatible-blue" />
+  <img src="https://img.shields.io/badge/License-MIT-green" />
+</p>
+
+---
+
 ## KHelper - A Kotlin (& Java 😉) CP Plugin for IntelliJ IDEA
 
 **KHelper** is a powerful IntelliJ IDEA plugin designed to significantly enhance the competitive programming experience
