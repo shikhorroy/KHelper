@@ -1,19 +1,5 @@
 <p align="center">
-  <picture>
-    <source
-      srcset="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon_dark.svg"
-      media="(prefers-color-scheme: dark)"
-    />
-    <source
-      srcset="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon.svg"
-      media="(prefers-color-scheme: light)"
-    />
-    <img
-      src="https://raw.githubusercontent.com/shikhorroy/KHelper/main/src/main/resources/META-INF/pluginIcon.svg"
-      alt="KHelper Plugin Icon"
-      width="200"
-    />
-  </picture>
+  <img src="src/main/resources/META-INF/pluginIcon.svg" alt="KHelper Plugin Icon" width="200" />
 </p>
 
 <h1 align="center">KHelper</h1>
@@ -29,6 +15,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Language-Kotlin-blueviolet" />
   <img src="https://img.shields.io/badge/Language-Java-red" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/IntelliJ%20IDEA-Compatible-blue" />
   <img src="https://img.shields.io/badge/License-MIT-green" />
 </p>
@@ -63,7 +52,7 @@ author.
   sample test cases with a single click.
 * **Test Management**: Add and manage custom test cases easily and conveniently.
 * **Easy Submission**: Copy your solution source code with one click or select it directly for submission.
-* **Theme Support**: Toggle between light and dark themes effortlessly.
+* **Theme Support**: Icons and panels follow the light and dark IDE themes.
 
 ---
 
@@ -71,9 +60,10 @@ author.
 
 * **Kotlin & Java Support**: KHelper supports both Kotlin and Java. You can switch your preferred language and edit
   templates in **Settings > KHelper**.
-* **Java 21 Required**: The plugin is built using Java 21. You **must** run your IDE with a runtime that supports this
-  version (or newer). Using older Java versions (like Java 17) will result in version mismatch errors during debugging
-  or execution.
+* **IDE Version**: IntelliJ IDEA 2025.3 or newer, with the bundled Kotlin and Java plugins enabled.
+* **Project JDK 11 or newer**: Tests run in your project's JDK, so the project SDK must be Java 11 or newer.
+* **Competitive Companion Port**: KHelper listens on `localhost:10043` by default. You can change the port in
+  **Settings > Tools > KHelper**. Use the same port as a custom port in the Competitive Companion extension.
 
 ---
 
