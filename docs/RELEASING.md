@@ -4,7 +4,7 @@ Three GitHub Actions workflows build, release and publish the plugin.
 
 | Workflow | Starts | What it does |
 |---|---|---|
-| `build.yml` (Build) | Push to `main` or `develop`, every pull request | Tests, builds and verifies the plugin, and keeps the zip as a build artifact |
+| `build.yml` (Build) | Push to `main` or `develop`, every pull request, or by hand | First checks which files changed. Only when code or build files changed, it tests, builds and verifies the plugin and keeps the zip. Docs-only changes skip it |
 | `release.yml` (Release) | By hand, with a version like `2.0.0` | Tests `develop`, merges it into `main`, tags `v2.0.0` and creates a GitHub Release with the zip |
 | `publish.yml` (Publish) | By hand, with a tag like `v2.0.0`; also when a person publishes a release by hand | Signs the plugin, publishes it to JetBrains Marketplace and attaches the signed zip to the release |
 
