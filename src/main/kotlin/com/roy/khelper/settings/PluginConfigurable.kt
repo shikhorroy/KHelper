@@ -4,7 +4,6 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.ActionLink
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
@@ -27,7 +26,6 @@ class PluginConfigurable : Configurable {
     }
     private val outputDirectoryField = JBTextField()
     private val serverPortField = JBTextField(6)
-    private val autoGenerateMainCheckbox = JBCheckBox("Generate Main after all tests pass")
 
     //~ Edited templates per language, so switching the combo box does not lose unsaved text
     private val editedTemplates = mutableMapOf<Language, String>()
@@ -58,8 +56,6 @@ class PluginConfigurable : Configurable {
             .addSeparator()
             .addLabeledComponent(JBLabel("Output directory:"), outputDirectoryField)
             .addComponent(hint("Folder for the generated Main file, relative to the project root"))
-            .addComponent(autoGenerateMainCheckbox)
-            .addComponent(hint("Copy Submission builds Main at any time, even when tests fail"))
             .addSeparator()
             .addLabeledComponent(JBLabel("Competitive Companion port:"), portRow())
             .addComponent(
@@ -79,7 +75,6 @@ class PluginConfigurable : Configurable {
                 editedTemplates[Language.JAVA] != state.javaSolutionTemplate ||
                 languageComboBox.selectedItem != state.preferredLanguage ||
                 outputDirectoryField.text != state.outputDirectory ||
-                autoGenerateMainCheckbox.isSelected != state.autoGenerateMain ||
                 serverPortField.text.trim() != state.serverPort.toString()
     }
 
@@ -95,7 +90,6 @@ class PluginConfigurable : Configurable {
         state.javaSolutionTemplate = editedTemplates.getValue(Language.JAVA)
         state.preferredLanguage = languageComboBox.selectedItem as Language
         state.outputDirectory = outputDirectoryField.text.trim()
-        state.autoGenerateMain = autoGenerateMainCheckbox.isSelected
 
         if (port != state.serverPort) {
             state.serverPort = port
@@ -112,7 +106,6 @@ class PluginConfigurable : Configurable {
         templateTextArea.text = state.templateFor(state.preferredLanguage)
         templateTextArea.caretPosition = 0
         outputDirectoryField.text = state.outputDirectory
-        autoGenerateMainCheckbox.isSelected = state.autoGenerateMain
         serverPortField.text = state.serverPort.toString()
     }
 

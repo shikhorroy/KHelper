@@ -98,10 +98,9 @@ class KSolutionRunProfileState(
         result.processHandler?.addProcessListener(object : ProcessListener {
             override fun processTerminated(event: ProcessEvent) {
                 testsDir?.let { FileUtil.delete(it.toFile()) }
-                if (event.exitCode == RUNNER_EXIT_PASSED && PluginSettings.getInstance().state.autoGenerateMain) {
-                    ApplicationManager.getApplication().invokeLater {
-                        MainGenerator.generate(environment.project, configuration.solutionFilePath)
-                    }
+                // Main is generated after every run, whether the tests passed or not.
+                ApplicationManager.getApplication().invokeLater {
+                    MainGenerator.generate(environment.project, configuration.solutionFilePath)
                 }
             }
         })
@@ -109,9 +108,6 @@ class KSolutionRunProfileState(
     }
 
     private companion object {
-        //~ Exit code of RemoteTestRunner when every test passed
-        const val RUNNER_EXIT_PASSED = 0
-
         val GRADLE_OUTPUT_DIRS = listOf(
             "build/classes/kotlin/main",
             "build/classes/java/main",
