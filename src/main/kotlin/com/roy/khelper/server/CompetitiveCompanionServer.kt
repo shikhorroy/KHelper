@@ -1,103 +1,87 @@
 package com.roy.khelper.server
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.wm.IdeFocusManager
 import com.roy.khelper.model.Problem
-import com.roy.khelper.server.listeners.ProblemListener
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
+import com.roy.khelper.services.KHelperNotifications
+import com.roy.khelper.settings.PluginSettings
+import java.io.IOException
 
+/**
+ * Owns the Competitive Companion server for the whole IDE. One IDE has one server, and each received problem goes
+ * to the project the user worked in last, never to every open project.
+ */
 @Service(Service.Level.APP)
-class CompetitiveCompanionServer {
+class CompetitiveCompanionServer : Disposable {
 
-    private val logger = logger<CompetitiveCompanionServer>()
-    private var server: EmbeddedServer<*, *>? = null
-    private val listeners = mutableListOf<ProblemListener>()
+    private val log = logger<CompetitiveCompanionServer>()
+
+    private val server = CompanionHttpServer(
+        onProblem = ::dispatch,
+        onBadRequest = { log.warn("Ignored a request that is not a Competitive Companion problem", it) },
+    )
+
+    val isRunning: Boolean get() = server.isRunning
+
+    /** Starts the server on the configured port. Safe to call many times. Tells the user when the port is busy. */
+    @Synchronized
+    fun ensureStarted(project: Project? = null) {
+        if (server.isRunning) return
+
+        val port = Integer.getInteger(PORT_PROPERTY) ?: PluginSettings.getInstance().state.serverPort
+        try {
+            server.start(port)
+            log.info("Competitive Companion server started on port $port")
+        } catch (e: IOException) {
+            log.warn("Could not start the Competitive Companion server on port $port", e)
+            KHelperNotifications.error(
+                project,
+                "Could not listen on port $port: ${e.message}. Another IDE or tool may use it. " +
+                        "Change the port in Settings | Tools | KHelper, and in Competitive Companion.",
+                "KHelper server not started",
+            )
+        }
+    }
+
+    /** Restarts the server, for example after the port changed in settings. */
+    @Synchronized
+    fun restart() {
+        server.stop()
+        ensureStarted()
+    }
+
+    override fun dispose() {
+        server.stop()
+    }
+
+    private fun dispatch(problem: Problem) {
+        log.info("Received problem: ${problem.name}")
+        ApplicationManager.getApplication().invokeLater {
+            val project = activeProject()
+            if (project == null) {
+                KHelperNotifications.warning(null, "Received '${problem.name}', but no project is open.")
+                return@invokeLater
+            }
+            ProblemImporter.import(project, problem)
+        }
+    }
+
+    private fun activeProject(): Project? {
+        val focused = IdeFocusManager.getGlobalInstance().lastFocusedFrame?.project
+        if (focused != null && !focused.isDisposed && !focused.isDefault) return focused
+        return ProjectManager.getInstance().openProjects.firstOrNull { !it.isDisposed }
+    }
 
     companion object {
-        const val DEFAULT_PORT = 10043
+        //~ JVM property that overrides the settings port, for example -Dkhelper.server.port=10044 in runIde
+        const val PORT_PROPERTY = "khelper.server.port"
 
-        fun getInstance(): CompetitiveCompanionServer {
-            return ApplicationManager.getApplication().getService(CompetitiveCompanionServer::class.java)
-        }
+        fun getInstance(): CompetitiveCompanionServer = service()
     }
-
-    fun start(port: Int = DEFAULT_PORT) {
-        if (server != null) {
-            logger.warn("Server is already running")
-            return
-        }
-
-        try {
-            server = embeddedServer(Netty, port = port) {
-                install(ContentNegotiation) {
-                    json(Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                    })
-                }
-
-                routing {
-                    post {
-                        try {
-                            val problem = call.receive<Problem>()
-                            logger.info("Received problem: ${problem.name}")
-
-                            // Notify all listeners
-                            notifyListeners(problem)
-
-                            call.respond(mapOf("status" to "ok"))
-                        } catch (e: Exception) {
-                            logger.error("Error processing problem", e)
-                            call.respond(mapOf("status" to "error", "message" to e.message))
-                        }
-                    }
-
-                    get("/health") {
-                        call.respond(mapOf("status" to "healthy"))
-                    }
-                }
-            }.start(wait = false)
-
-            logger.info("Competitive Companion server started on port $port")
-        } catch (e: Exception) {
-            logger.error("Failed to start server", e)
-            throw e
-        }
-    }
-
-    @Suppress("unused")
-    fun stop() {
-        server?.stop(1000, 2000)
-        server = null
-        logger.info("Competitive Companion server stopped")
-    }
-
-    fun addListener(listener: ProblemListener) {
-        listeners.add(listener)
-    }
-
-    fun removeListener(listener: ProblemListener) {
-        listeners.remove(listener)
-    }
-
-    private fun notifyListeners(problem: Problem) {
-        listeners.forEach { listener ->
-            try {
-                listener.onProblemReceived(problem)
-            } catch (e: Exception) {
-                logger.error("Error notifying listener", e)
-            }
-        }
-    }
-
-    fun isRunning(): Boolean = server != null
 }

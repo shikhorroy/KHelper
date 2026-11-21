@@ -39,3 +39,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+### Plugin signing keys ###
+*.pem
+*.crt

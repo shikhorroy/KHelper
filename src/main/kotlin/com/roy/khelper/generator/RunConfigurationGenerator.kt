@@ -1,71 +1,40 @@
 package com.roy.khelper.generator
 
+import com.intellij.compiler.options.CompileStepBeforeRun
 import com.intellij.execution.BeforeRunTaskProvider
-import com.intellij.execution.RunManagerEx
-import com.intellij.execution.configurations.ConfigurationTypeUtil
+import com.intellij.execution.RunManager
+import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.openapi.project.Project
 import com.roy.khelper.model.Problem
 import com.roy.khelper.runner.KSolutionConfigurationType
 import com.roy.khelper.runner.KSolutionRunConfiguration
+import com.roy.khelper.settings.PluginSettings.Language
 
+/** Creates or updates the run configuration of a problem and selects it. */
 object RunConfigurationGenerator {
 
-    fun createRunConfiguration(
-            project: Project,
-            problem: Problem,
-            filePath: String,
-            language: String
-    ) {
-        val runManager = RunManagerEx.getInstanceEx(project)
-        val configurationType =
-                ConfigurationTypeUtil.findConfigurationType(KSolutionConfigurationType::class.java)
+    fun createRunConfiguration(project: Project, problem: Problem, filePath: String, language: Language) {
+        val runManager = RunManager.getInstance(project)
+        val type = KSolutionConfigurationType.getInstance()
+        val name = "[${language.displayName}] Test: ${problem.name}"
 
-        val factory = configurationType.configurationFactories[0]
-        val languagePrefix =
-                if (language == com.roy.khelper.settings.PluginSettings.Language.KOTLIN.name)
-                        "[Kotlin]"
-                else "[Java]"
-        val configurationName = "$languagePrefix Test: ${problem.name}"
+        val settings = runManager.findConfigurationByTypeAndName(type, name)
+            ?: runManager.createConfiguration(name, type.factory).also { runManager.addConfiguration(it) }
 
-        // Check if configuration already exists
-        val existingConfig =
-                runManager.allSettings.find {
-                    it.name == configurationName && it.type.id == configurationType.id
-                }
+        val config = settings.configuration as KSolutionRunConfiguration
+        config.problemId = problem.generateId()
+        config.solutionFilePath = filePath
+        config.language = language.name
+        ensureBuildBeforeRun(project, config)
 
-        if (existingConfig != null) {
-            // Update existing configuration
-            val runConfig = existingConfig.configuration as KSolutionRunConfiguration
-            runConfig.problemId = problem.generateId()
-            runConfig.solutionFilePath = filePath
-            runConfig.language = language
-            runManager.selectedConfiguration = existingConfig
-        } else {
-            // Create new configuration
-            val settings = runManager.createConfiguration(configurationName, factory)
-            val runConfig = settings.configuration as KSolutionRunConfiguration
-            runConfig.problemId = problem.generateId()
-            runConfig.solutionFilePath = filePath
-            runConfig.language = language
+        runManager.selectedConfiguration = settings
+    }
 
-            // Add "Build" before launch task
-            // Find the "Make" provider dynamically to avoid unresolved reference to
-            // CompileStepBeforeRun
-            val makeProvider =
-                    BeforeRunTaskProvider.EP_NAME.getExtensions(project).find {
-                        it.id.toString() == "Make"
-                    }
-
-            if (makeProvider != null) {
-                val task = makeProvider.createTask(runConfig)
-                if (task != null) {
-                    task.isEnabled = true
-                    runManager.setBeforeRunTasks(runConfig, listOf(task))
-                }
-            }
-
-            runManager.addConfiguration(settings)
-            runManager.selectedConfiguration = settings
-        }
+    /** Adds the "Build" step so the solution is compiled before each run. */
+    fun ensureBuildBeforeRun(project: Project, config: RunConfiguration) {
+        if (config.beforeRunTasks.any { it.providerId == CompileStepBeforeRun.ID }) return
+        val task = BeforeRunTaskProvider.getProvider(project, CompileStepBeforeRun.ID)?.createTask(config) ?: return
+        task.isEnabled = true
+        config.beforeRunTasks = config.beforeRunTasks + task
     }
 }
