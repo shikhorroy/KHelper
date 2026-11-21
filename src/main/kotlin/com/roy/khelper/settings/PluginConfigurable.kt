@@ -1,139 +1,121 @@
 package com.roy.khelper.settings
 
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
-import javax.swing.JCheckBox
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import com.roy.khelper.server.CompetitiveCompanionServer
+import com.roy.khelper.settings.PluginSettings.Language
+import java.awt.Font
 import javax.swing.JComponent
 import javax.swing.JPanel
 
 class PluginConfigurable : Configurable {
 
-    private var mainPanel: JPanel? = null
-    private val serverPortField = JBTextField()
-    private val templateTextArea = JBTextArea(15, 60)
+    private val languageComboBox = ComboBox(Language.entries.toTypedArray())
+    private val templateTextArea = JBTextArea(15, 60).apply {
+        font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
+    }
     private val outputDirectoryField = JBTextField()
-    private val autoGenerateMainCheckbox =
-        JCheckBox("Auto-generate Main.kt when all tests pass")
-    private val useFastIOCheckbox = JCheckBox("Use Fast I/O template")
-    private val languageComboBox = ComboBox(PluginSettings.Language.entries.toTypedArray())
+    private val serverPortField = JBTextField(6)
+    private val autoGenerateMainCheckbox = JBCheckBox("Generate Main after all tests pass")
 
-    private var currentKotlinTemplate = ""
-    private var currentJavaTemplate = ""
-    private var lastSelectedLanguage: PluginSettings.Language? = null
+    //~ Edited templates per language, so switching the combo box does not lose unsaved text
+    private val editedTemplates = mutableMapOf<Language, String>()
+    private var shownLanguage: Language = Language.KOTLIN
 
     override fun getDisplayName(): String = "KHelper"
 
     override fun createComponent(): JComponent {
-        reset()
-
         languageComboBox.addActionListener {
-            val selected = languageComboBox.selectedItem as PluginSettings.Language
-            if (selected != lastSelectedLanguage) {
-                // Save current text to the previous language's variable
-                if (lastSelectedLanguage == PluginSettings.Language.KOTLIN) {
-                    currentKotlinTemplate = templateTextArea.text
-                } else {
-                    currentJavaTemplate = templateTextArea.text
-                }
-
-                // Switch to a new language's template
-                templateTextArea.text =
-                    if (selected == PluginSettings.Language.KOTLIN) currentKotlinTemplate else currentJavaTemplate
-                lastSelectedLanguage = selected
+            val selected = languageComboBox.selectedItem as Language
+            if (selected != shownLanguage) {
+                editedTemplates[shownLanguage] = templateTextArea.text
+                templateTextArea.text = editedTemplates.getValue(selected)
+                shownLanguage = selected
             }
         }
 
-        mainPanel =
-            FormBuilder.createFormBuilder()
-                .addLabeledComponent(JBLabel("Preferred Language:"), languageComboBox, 1, false)
-                .addSeparator()
-                .addLabeledComponent(
-                    JBLabel("Solution Template:"),
-                    templateTextArea,
-                    1,
-                    true
-                )
-                .addComponent(
-                    com.intellij.ui.components.ActionLink("Reset to Default") {
-                        val selected = languageComboBox.selectedItem as PluginSettings.Language
-                        templateTextArea.text = if (selected == PluginSettings.Language.KOTLIN)
-                            PluginSettings.DEFAULT_KOTLIN_TEMPLATE
-                        else
-                            PluginSettings.DEFAULT_JAVA_TEMPLATE
-                    }
-                )
-                .addComponent(
-                    JBLabel(
-                        "Available variables: \${PROBLEM_ID}, \${PROBLEM_NAME}, \${CLASS_NAME}, \${TIME_LIMIT}, \${MEMORY_LIMIT}"
-                    )
-                )
-                .addSeparator()
-                .addLabeledComponent(
-                    JBLabel("Output Directory:"),
-                    outputDirectoryField,
-                    1,
-                    false
-                )
-                .addComponent(
-                    JBLabel(
-                        "Directory where Main.kt will be generated (relative to project root)"
-                    )
-                )
-                .addSeparator()
-                .addComponentFillVertically(JPanel(), 0)
-                .panel
+        val resetLink = ActionLink("Reset to Default") {
+            templateTextArea.text = PluginSettings.defaultTemplateFor(shownLanguage)
+        }
 
-        return mainPanel!!
+        return FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Preferred language:"), languageComboBox)
+            .addSeparator()
+            .addLabeledComponent(JBLabel("Solution template:"), JBScrollPane(templateTextArea), true)
+            .addComponent(resetLink)
+            .addComponent(hint($$"Variables: ${PROBLEM_ID}, ${PROBLEM_NAME}, ${CLASS_NAME}, ${TIME_LIMIT}, ${MEMORY_LIMIT}"))
+            .addSeparator()
+            .addLabeledComponent(JBLabel("Output directory:"), outputDirectoryField)
+            .addComponent(hint("Folder for the generated Main file, relative to the project root"))
+            .addComponent(autoGenerateMainCheckbox)
+            .addSeparator()
+            .addLabeledComponent(JBLabel("Competitive Companion port:"), serverPortField)
+            .addComponent(hint("Must match a custom port in the Competitive Companion extension settings"))
+            .addComponentFillVertically(JPanel(), 0)
+            .panel
     }
 
     override fun isModified(): Boolean {
-        val settings = PluginSettings.getInstance()
-
-        // Sync current text to temporary variables before checking
-        val selected = languageComboBox.selectedItem as PluginSettings.Language
-        if (selected == PluginSettings.Language.KOTLIN) {
-            currentKotlinTemplate = templateTextArea.text
-        } else {
-            currentJavaTemplate = templateTextArea.text
-        }
-
-        return currentKotlinTemplate != settings.state.solutionTemplate ||
-                currentJavaTemplate != settings.state.javaSolutionTemplate ||
-                languageComboBox.selectedItem != settings.state.preferredLanguage ||
-                outputDirectoryField.text != settings.state.outputDirectory
+        val state = PluginSettings.getInstance().state
+        syncShownTemplate()
+        return editedTemplates[Language.KOTLIN] != state.solutionTemplate ||
+                editedTemplates[Language.JAVA] != state.javaSolutionTemplate ||
+                languageComboBox.selectedItem != state.preferredLanguage ||
+                outputDirectoryField.text != state.outputDirectory ||
+                autoGenerateMainCheckbox.isSelected != state.autoGenerateMain ||
+                serverPortField.text.trim() != state.serverPort.toString()
     }
 
     override fun apply() {
-        val settings = PluginSettings.getInstance()
-
-        // Sync current text to temporary variables before applying
-        val selected = languageComboBox.selectedItem as PluginSettings.Language
-        if (selected == PluginSettings.Language.KOTLIN) {
-            currentKotlinTemplate = templateTextArea.text
-        } else {
-            currentJavaTemplate = templateTextArea.text
+        val port = serverPortField.text.trim().toIntOrNull()
+        if (port == null || port !in 1..65535) {
+            throw ConfigurationException("The port must be a number from 1 to 65535.")
         }
 
-        settings.state.solutionTemplate = currentKotlinTemplate
-        settings.state.javaSolutionTemplate = currentJavaTemplate
-        settings.state.preferredLanguage = selected
-        settings.state.outputDirectory = outputDirectoryField.text
+        val state = PluginSettings.getInstance().state
+        syncShownTemplate()
+        state.solutionTemplate = editedTemplates.getValue(Language.KOTLIN)
+        state.javaSolutionTemplate = editedTemplates.getValue(Language.JAVA)
+        state.preferredLanguage = languageComboBox.selectedItem as Language
+        state.outputDirectory = outputDirectoryField.text.trim()
+        state.autoGenerateMain = autoGenerateMainCheckbox.isSelected
+
+        if (port != state.serverPort) {
+            state.serverPort = port
+            CompetitiveCompanionServer.getInstance().restart()
+        }
     }
 
     override fun reset() {
-        val settings = PluginSettings.getInstance()
+        val state = PluginSettings.getInstance().state
+        editedTemplates[Language.KOTLIN] = state.solutionTemplate
+        editedTemplates[Language.JAVA] = state.javaSolutionTemplate
+        shownLanguage = state.preferredLanguage
+        languageComboBox.selectedItem = state.preferredLanguage
+        templateTextArea.text = state.templateFor(state.preferredLanguage)
+        templateTextArea.caretPosition = 0
+        outputDirectoryField.text = state.outputDirectory
+        autoGenerateMainCheckbox.isSelected = state.autoGenerateMain
+        serverPortField.text = state.serverPort.toString()
+    }
 
-        currentKotlinTemplate = settings.state.solutionTemplate
-        currentJavaTemplate = settings.state.javaSolutionTemplate
-        lastSelectedLanguage = settings.state.preferredLanguage
+    private fun syncShownTemplate() {
+        editedTemplates[shownLanguage] = templateTextArea.text
+    }
 
-        languageComboBox.selectedItem = lastSelectedLanguage
-        templateTextArea.text =
-            if (lastSelectedLanguage == PluginSettings.Language.KOTLIN) currentKotlinTemplate else currentJavaTemplate
-        outputDirectoryField.text = settings.state.outputDirectory
+    private fun hint(text: String) = JBLabel(text).apply {
+        componentStyle = UIUtil.ComponentStyle.SMALL
+        fontColor = UIUtil.FontColor.BRIGHTER
+        border = JBUI.Borders.emptyBottom(4)
     }
 }
