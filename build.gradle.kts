@@ -9,7 +9,8 @@ plugins {
 }
 
 group = "com.roy"
-version = "2.0.0-SNAPSHOT"
+// The release workflow passes the version from the Git tag, for example -PpluginVersion=2.0.0 for tag v2.0.0.
+version = providers.gradleProperty("pluginVersion").getOrElse("2.0.0-SNAPSHOT")
 
 repositories {
     mavenCentral()
@@ -66,6 +67,17 @@ intellijPlatform {
               <li>Smaller plugin: no bundled Ktor, Netty, coroutines or Kotlin stdlib.</li>
             </ul>
         """.trimIndent()
+    }
+
+    // Secrets come from environment variables, set only by the release workflow. See docs/RELEASING.md.
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
+
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
     }
 
     pluginVerification {
