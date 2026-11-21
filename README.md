@@ -28,13 +28,11 @@
 
 **KHelper** is a powerful IntelliJ IDEA plugin designed to significantly enhance the competitive programming experience
 for Kotlin/Java programmers. Inspired by the functionality and spirit of the classic **CHelper** plugin. KHelper
-automates
-tedious setup, testing, and submission tasks, so you can focus purely on solving problems.
+automates tedious setup, testing, and submission tasks, so you can focus purely on solving problems.
 
-This plugin is designed, owned, and maintained by **Shikhor Kumer Roy**.
-During development, **GitHub Copilot** was used as an AI-assisted coding tool to accelerate implementation and improve
-developer productivity. All architectural decisions, feature design, and final code responsibility remain with the
-author.
+This plugin is designed, owned, and maintained by **Shikhor Kumer Roy**. During development, **GitHub Copilot** was used
+as an AI-assisted coding tool to accelerate implementation and improve developer productivity. All architectural
+decisions, feature design, and final code responsibility remain with the author.
 
 ---
 
@@ -50,8 +48,13 @@ author.
   your hard work safe.
 * **Instant Testing & Debugging**: Automatically sets up IntelliJ Run Configurations so you can run or debug against
   sample test cases with a single click.
-* **Test Management**: Add and manage custom test cases easily and conveniently.
-* **Easy Submission**: Copy your solution source code with one click or select it directly for submission.
+* **Clear Verdicts**: Each test shows Accepted, Wrong Answer, Runtime Error or Time Limit Exceeded. Every test starts
+  with fresh static state and a large stack, like on online judges.
+* **Test Management**: Add, edit, duplicate and delete test cases, and turn single tests or all tests on and off.
+* **Easy Submission**: After every run, KHelper writes a single `Main` file with your solution and the project code it
+  uses. **Copy Submission** puts it on the clipboard at any time.
+* **Quick Actions**: Open the source, open the problem in the browser, copy the submission, delete the problem and open
+  settings, from the KHelper tool window title bar or from **Tools > KHelper**.
 * **Theme Support**: Icons and panels follow the light and dark IDE themes.
 
 ---
@@ -59,11 +62,12 @@ author.
 ## Requirements & Compatibility
 
 * **Kotlin & Java Support**: KHelper supports both Kotlin and Java. You can switch your preferred language and edit
-  templates in **Settings > KHelper**.
+  templates in **Settings > Tools > KHelper**.
 * **IDE Version**: IntelliJ IDEA 2025.3 or newer, with the bundled Kotlin and Java plugins enabled.
 * **Project JDK 11 or newer**: Tests run in your project's JDK, so the project SDK must be Java 11 or newer.
-* **Competitive Companion Port**: KHelper listens on `localhost:10043` by default. You can change the port in
-  **Settings > Tools > KHelper**. Use the same port as a custom port in the Competitive Companion extension.
+* **Competitive Companion Port**: KHelper listens on `localhost:10043` by default, which Competitive Companion sends to
+  without any setup. You can change the port in **Settings > Tools > KHelper**. A different port must also be added as a
+  custom port in the Competitive Companion extension.
 
 ---
 
@@ -71,8 +75,8 @@ author.
 
 1. **Install KHelper** in your IntelliJ IDE.
 2. **Install Competitive Companion** in your browser (Chrome/Firefox).
-3. **Configure Preferences**: Go to **Settings > KHelper** to select your preferred language (Kotlin/Java) and customize
-   your templates.
+3. **Configure Preferences**: Go to **Settings > Tools > KHelper** to select your preferred language (Kotlin/Java) and
+   customize your templates.
 4. **Open your project** in IntelliJ.
 5. **Go to a problem** in your browser (e.g. on Codeforces).
 6. **Click the Competitive Companion button**.
@@ -82,19 +86,39 @@ author.
 
 ## Local Build from Source
 
-To build and run the plugin locally:
+Start a sandbox IDE with the plugin:
 
 ```bash
 ./gradlew runIde
 ```
 
-To build a distribution file:
+The sandbox listens on port `10044` (`sandboxPort` in `gradle.properties`), so it does not clash with KHelper in your
+main IDE. Add that port as a custom port in Competitive Companion. This port is for development only; real installations
+use the port from Settings.
+
+To load code changes into a running sandbox without a restart, run this in a second terminal:
+
+```bash
+./gradlew prepareSandbox
+```
+
+Run the tests:
+
+```bash
+./gradlew test
+```
+
+Build a distribution file. The output file is in `build/distributions/`:
 
 ```bash
 ./gradlew buildPlugin
 ```
 
-The output file will be located in `build/distributions/`.
+Check compatibility with the plugin verifier (add `-PverifyAllIdes` to check all recommended IDE versions):
+
+```bash
+./gradlew verifyPlugin
+```
 
 ---
 
