@@ -36,8 +36,11 @@ openssl rsa -in private_encrypted.pem -out private.pem
 openssl req -key private.pem -new -x509 -days 365 -out chain.crt
 ```
 
-The first command asks for a password. Remember it. Keep `private.pem` and `chain.crt` private and out of Git. The
-certificate is valid for 365 days; create a new one before it ends.
+The first command asks for a password, which locks `private_encrypted.pem`. The second command writes the same key
+unlocked to `private.pem`, so the pipeline needs no password. After you add the secrets, delete `private.pem` from your
+disk. Keep `private_encrypted.pem` and its password somewhere safe and offline: it is your backup, and the second
+command recreates `private.pem` from it. Keep all key files out of Git. The certificate is valid for 365 days; create a
+new one before it ends.
 
 ### 4. Add the repository secrets
 
@@ -47,8 +50,7 @@ In GitHub, open the repository, then **Settings > Secrets and variables > Action
 |---|---|
 | `PUBLISH_TOKEN` | The Marketplace token from step 2 |
 | `CERTIFICATE_CHAIN` | The whole content of `chain.crt` |
-| `PRIVATE_KEY` | The whole content of `private.pem` |
-| `PRIVATE_KEY_PASSWORD` | The password from step 3 |
+| `PRIVATE_KEY` | The whole content of `private.pem` (the unlocked key) |
 
 ## Release a new version
 
