@@ -1,26 +1,24 @@
 package com.roy.khelper.ui.toolwindow
 
-import com.intellij.ide.BrowserUtil
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
-import com.roy.khelper.generator.MainGenerator
 import com.roy.khelper.services.ProblemManagerService
+import com.roy.khelper.ui.ProblemCommands
 import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.awt.datatransfer.StringSelection
 import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JPanel
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
+import javax.swing.border.TitledBorder
 
 class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
 
@@ -29,8 +27,7 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
     private val timeLimitLabel = JBLabel()
     private val memoryLimitLabel = JBLabel()
     private val testCaseCountLabel = JBLabel()
-    private val linkPanel =
-        JPanel(BorderLayout().apply { vgap = 0 }) // Dedicated panel for the link
+    private val linkPanel = JPanel(BorderLayout())
 
     init {
         border = JBUI.Borders.empty(10)
@@ -43,21 +40,18 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
                         BorderFactory.createTitledBorder(
                             BorderFactory.createEtchedBorder(),
                             "Problem Information",
-                            javax.swing.border.TitledBorder.LEFT,
-                            javax.swing.border.TitledBorder.TOP,
+                            TitledBorder.LEFT,
+                            TitledBorder.TOP,
                             JBUI.Fonts.label().deriveFont(Font.BOLD, 12f)
                         ),
                         JBUI.Borders.empty(12)
                     )
             }
 
-        // Problem name section
         val namePanel = createInfoRow("Problem:", nameLabel)
 
-        // Online Judge section
         val onlineJudgePanel = createInfoRow("Online Judge:", onlineJudgeLabel)
 
-        // Constraints section
         val constraintsPanel =
             JPanel(GridBagLayout()).apply {
                 val gbc =
@@ -90,7 +84,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
                 add(memoryLimitLabel, gbc)
             }
 
-        // Test cases section
         val testCasesPanel = createInfoRow("Test Cases:", testCaseCountLabel)
 
         contentPanel.add(namePanel)
@@ -101,10 +94,9 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
         contentPanel.add(Box.createVerticalStrut(8))
         contentPanel.add(testCasesPanel)
 
-        // Add a horizontal separator and link panel at the bottom
         val separator =
-            javax.swing.JSeparator(javax.swing.SwingConstants.HORIZONTAL).apply {
-                preferredSize = java.awt.Dimension(1, 8)
+            JSeparator(SwingConstants.HORIZONTAL).apply {
+                preferredSize = Dimension(1, 8)
             }
 
         contentPanel.add(Box.createVerticalStrut(8))
@@ -133,7 +125,7 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
     }
 
     fun updateProblem(problemId: String?, language: String?) {
-        linkPanel.removeAll() // Clear previous links
+        linkPanel.removeAll()
 
         if (problemId == null || language == null) {
             clear()
@@ -156,70 +148,16 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
         memoryLimitLabel.text = "${problem.memoryLimit} MB"
         testCaseCountLabel.text = "${problemData.testCases.size}"
 
-        // Update URL link and action links
-        val urlLink =
-            ActionLink("🔗 Open Problem in Browser") { BrowserUtil.browse(problem.url) }.apply {
-                border = JBUI.Borders.emptyTop(8)
-            }
+        val links = listOf(
+            "Open Problem in Browser" to ProblemCommands::openInBrowser,
+            "Open Source" to ProblemCommands::openSource,
+            "Copy Submission" to ProblemCommands::copySubmission,
+        ).map { (text, command) ->
+            ActionLink(text) { command(project, problemData) }.apply { border = JBUI.Borders.emptyTop(8) }
+        }
 
-        // Open Source link
-        val openSourceLink =
-            ActionLink("📂 Open Source") {
-                try {
-                    val filePath = problemData.filePath
-                    val virtualFile =
-                        LocalFileSystem.getInstance().refreshAndFindFileByPath(filePath)
-                    if (virtualFile != null) {
-                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
-                        showNotification(
-                            project,
-                            "Source opened in editor",
-                            NotificationType.INFORMATION
-                        )
-                    } else {
-                        showNotification(
-                            project,
-                            "Source file not found: $filePath",
-                            NotificationType.WARNING
-                        )
-                    }
-                } catch (ex: Exception) {
-                    showNotification(
-                        project,
-                        "Error opening source: ${ex.message}",
-                        NotificationType.ERROR
-                    )
-                }
-            }
-                .apply { border = JBUI.Borders.emptyTop(8) }
-
-        // Copy Submission link
-        val copySubmissionLink =
-            ActionLink("📋 Copy Submission") {
-                try {
-                    val mainContent =
-                        MainGenerator.getMainContent(project, problemData.filePath)
-                    CopyPasteManager.getInstance().setContents(StringSelection(mainContent))
-                    showNotification(
-                        project,
-                        "Submission code for '${problemData.problem.name}' copied to clipboard!",
-                        NotificationType.INFORMATION
-                    )
-                } catch (ex: Exception) {
-                    showNotification(
-                        project,
-                        "Error copying submission: ${ex.message}",
-                        NotificationType.ERROR
-                    )
-                }
-            }
-                .apply { border = JBUI.Borders.emptyTop(8) }
-
-        // Add links inline on a single row
-        val inlinePanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0))
-        inlinePanel.add(urlLink)
-        inlinePanel.add(openSourceLink)
-        inlinePanel.add(copySubmissionLink)
+        val inlinePanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        links.forEach { inlinePanel.add(it) }
 
         linkPanel.add(inlinePanel, BorderLayout.WEST)
 
@@ -238,12 +176,5 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
 
         revalidate()
         repaint()
-    }
-
-    private fun showNotification(project: Project, message: String, type: NotificationType) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup("KHelper Notifications")
-            .createNotification("KHelper", message, type)
-            .notify(project)
     }
 }

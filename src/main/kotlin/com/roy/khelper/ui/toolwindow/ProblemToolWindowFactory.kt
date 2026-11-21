@@ -9,10 +9,8 @@ import com.intellij.ui.content.ContentFactory
 class ProblemToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val mainPanel = ProblemToolWindowPanel(project)
-        val content = ContentFactory.getInstance().createContent(mainPanel, "", false)
+        val content = ContentFactory.getInstance().createContent(null, "", false)
+        content.component = ProblemToolWindowPanel(project, content)
         toolWindow.contentManager.addContent(content)
     }
-
-    override fun shouldBeAvailable(project: Project): Boolean = true
 }
