@@ -1,14 +1,10 @@
 package com.roy.khelper.ui.toolwindow
 
 import com.intellij.openapi.project.Project
-import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.roy.khelper.services.ProblemManagerService
-import com.roy.khelper.ui.ProblemCommands
 import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
@@ -16,8 +12,6 @@ import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JPanel
-import javax.swing.JSeparator
-import javax.swing.SwingConstants
 import javax.swing.border.TitledBorder
 
 class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
@@ -27,7 +21,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
     private val timeLimitLabel = JBLabel()
     private val memoryLimitLabel = JBLabel()
     private val testCaseCountLabel = JBLabel()
-    private val linkPanel = JPanel(BorderLayout())
 
     init {
         border = JBUI.Borders.empty(10)
@@ -94,16 +87,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
         contentPanel.add(Box.createVerticalStrut(8))
         contentPanel.add(testCasesPanel)
 
-        val separator =
-            JSeparator(SwingConstants.HORIZONTAL).apply {
-                preferredSize = Dimension(1, 8)
-            }
-
-        contentPanel.add(Box.createVerticalStrut(8))
-        contentPanel.add(separator)
-        contentPanel.add(Box.createVerticalStrut(6))
-        contentPanel.add(linkPanel)
-
         add(contentPanel, BorderLayout.NORTH)
     }
 
@@ -125,8 +108,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
     }
 
     fun updateProblem(problemId: String?, language: String?) {
-        linkPanel.removeAll()
-
         if (problemId == null || language == null) {
             clear()
             return
@@ -148,19 +129,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
         memoryLimitLabel.text = "${problem.memoryLimit} MB"
         testCaseCountLabel.text = "${problemData.testCases.size}"
 
-        val links = listOf(
-            "Open Problem in Browser" to ProblemCommands::openInBrowser,
-            "Open Source" to ProblemCommands::openSource,
-            "Copy Submission" to ProblemCommands::copySubmission,
-        ).map { (text, command) ->
-            ActionLink(text) { command(project, problemData) }.apply { border = JBUI.Borders.emptyTop(8) }
-        }
-
-        val inlinePanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
-        links.forEach { inlinePanel.add(it) }
-
-        linkPanel.add(inlinePanel, BorderLayout.WEST)
-
         revalidate()
         repaint()
     }
@@ -171,8 +139,6 @@ class MetadataPanel(private val project: Project) : JPanel(BorderLayout()) {
         timeLimitLabel.text = "-"
         memoryLimitLabel.text = "-"
         testCaseCountLabel.text = "-"
-
-        linkPanel.removeAll()
 
         revalidate()
         repaint()

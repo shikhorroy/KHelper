@@ -125,7 +125,7 @@
 
             <action id="KHelper.OpenSettings"
                     class="com.roy.khelper.ui.actions.OpenSettingsAction"
-                    text="Settings"
+                    text="KHelper Settings"
                     icon="/icons/settings.svg"
                     description="Configure KHelper settings">
             </action>

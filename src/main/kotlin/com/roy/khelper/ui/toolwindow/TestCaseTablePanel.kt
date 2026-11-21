@@ -214,9 +214,11 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
         ): Component {
             val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
             if (value is String) {
-                val long = value.length > PREVIEW_CHARS
-                text = if (long) value.take(PREVIEW_CHARS) + "..." else value
-                toolTipText = if (long) {
+                //~ A table cell shows one line, so line breaks become a visible mark instead of vanishing
+                val oneLine = value.trimEnd().replace(LINE_BREAK, LINE_BREAK_MARK)
+                val showTooltip = oneLine.length > PREVIEW_CHARS || value.trimEnd().contains('\n')
+                text = if (oneLine.length > PREVIEW_CHARS) oneLine.take(PREVIEW_CHARS) + "..." else oneLine
+                toolTipText = if (showTooltip) {
                     "<html><pre>${StringUtil.escapeXmlEntities(value.take(TOOLTIP_CHARS))}</pre></html>"
                 } else {
                     null
@@ -233,5 +235,7 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
         const val COLUMN_OUTPUT = 3
         const val PREVIEW_CHARS = 50
         const val TOOLTIP_CHARS = 500
+        const val LINE_BREAK_MARK = " ↵ "
+        val LINE_BREAK = Regex("\r?\n")
     }
 }
