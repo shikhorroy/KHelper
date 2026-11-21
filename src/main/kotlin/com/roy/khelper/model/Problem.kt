@@ -2,22 +2,29 @@ package com.roy.khelper.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * A problem as sent by Competitive Companion. The class is also stored with the IntelliJ XML serializer, so every
+ * property stays mutable, keeps a default value and keeps its name, or saved problems from older versions are lost.
+ */
 @Serializable
 data class Problem(
     var name: String = "",
     var group: String = "",
     var url: String = "",
-    var timeLimit: Int = 0, // in milliseconds
-    var memoryLimit: Int = 0, // in megabytes
+    //~ Time limit in milliseconds
+    var timeLimit: Int = 0,
+    //~ Memory limit in megabytes
+    var memoryLimit: Int = 0,
     var tests: List<TestCase> = emptyList(),
     var input: InputOutput? = null,
     var output: InputOutput? = null,
     var languages: Languages? = null,
-    var batch: Batch? = null
+    var batch: Batch? = null,
 ) {
     @Serializable
     data class InputOutput(
-        var type: String = "" // "stdin", "stdout", "file", etc.
+        //~ "stdin", "stdout", "file", ...
+        var type: String = "",
     )
 
     @Serializable
@@ -29,38 +36,26 @@ data class Problem(
     @Serializable
     data class Batch(var id: String = "", var size: Int = 0)
 
-    /** Generate a sanitized ID from the problem name */
+    /**
+     * A sanitized id made from the problem name. It is used as a package name, so it never starts with a digit.
+     * Saved problems and run configurations are keyed by it, so the rules must not change.
+     */
     fun generateId(): String {
-        // Replace any non-alphanumeric characters with underscore, collapse repeats,
-        // trim leading/trailing underscores and lowercase the result.
         var id = name
             .trim()
-            .replace(Regex("[^A-Za-z0-9]+"), "_")
-            .replace(Regex("_+"), "_")
-            .replace(Regex("^_+|_+$"), "")
+            .replace(NON_ALPHANUMERIC, "_")
+            .trim('_')
             .lowercase()
 
-        // If sanitization produced an empty string, fall back to a deterministic id
         if (id.isEmpty()) {
-            val h = name.hashCode().toUInt().toString()
-            id = "problem_$h"
+            id = "problem_${name.hashCode().toUInt()}"
         }
-
-        // Package identifiers must not start with a digit - prefix with 'p' if necessary
         if (id.first().isDigit()) {
             id = "p$id"
         }
-
         return id
     }
-
-    /** Get a display-friendly name for the problem */
-    fun getDisplayName(): String {
-        return name
-    }
-
-    /** Get the contest/category name */
-    fun getContestName(): String {
-        return group.substringBefore(" - ").ifEmpty { "Unknown Contest" }
-    }
 }
+
+//~ Not in a companion object: kotlinx.serialization puts the generated serializer() there
+private val NON_ALPHANUMERIC = Regex("[^A-Za-z0-9]+")
