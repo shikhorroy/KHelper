@@ -1,11 +1,15 @@
 # Releasing KHelper
 
-Two GitHub Actions workflows build and publish the plugin.
+Three GitHub Actions workflows build, release and publish the plugin.
 
-| Workflow | Runs on | What it does |
+| Workflow | Starts | What it does |
 |---|---|---|
-| `.github/workflows/build.yml` | Push to `main` or `develop`, every pull request | Tests, builds and verifies the plugin, and keeps the zip as a build artifact |
-| `.github/workflows/release.yml` | A published GitHub Release | Tests, verifies, signs and publishes the plugin to JetBrains Marketplace, and attaches the zip to the release |
+| `build.yml` (Build) | Push to `main` or `develop`, every pull request | Tests, builds and verifies the plugin, and keeps the zip as a build artifact |
+| `release.yml` (Release) | By hand, with a version like `2.0.0` | Tests `develop`, merges it into `main`, tags `v2.0.0` and creates a GitHub Release with the zip |
+| `publish.yml` (Publish) | By hand, with a tag like `v2.0.0`; also when a person publishes a release by hand | Signs the plugin, publishes it to JetBrains Marketplace and attaches the signed zip to the release |
+
+Publish is separate because GitHub does not let a release made by a workflow start another workflow. So after Release
+finishes, start Publish yourself.
 
 ## One-time setup
 
@@ -48,14 +52,19 @@ In GitHub, open the repository, then **Settings > Secrets and variables > Action
 
 ## Release a new version
 
-1. Merge the work into `main`.
-2. In GitHub, open **Releases > Draft a new release**.
-3. Create a tag like `v2.0.0` on `main`. The tag sets the plugin version: `v2.0.0` publishes version `2.0.0`.
-4. Write the release notes and click **Publish release**.
-5. Watch the **Release** workflow in the **Actions** tab. When it is green, the new version is on the Marketplace (after
-   JetBrains approves it) and the signed zip is attached to the GitHub Release.
+1. Merge the finished work into `develop`.
+2. In GitHub, open **Actions > Release > Run workflow**, enter the version (for example `2.0.0`) and run it.
+3. When it is green, `main` holds `develop`, the tag `v2.0.0` exists, and the GitHub Release has the zip and generated
+   release notes. Edit the notes in GitHub if you like.
+4. Open **Actions > Publish > Run workflow**, enter the tag `v2.0.0` and run it.
+5. When it is green, the new version is on the Marketplace (after JetBrains approves it) and the signed zip is on the
+   GitHub Release.
 
-The tag must look like `v1.2.3`. Other tags stop the workflow before anything is published.
+The version must look like `1.2.3`, and its tag must not exist yet. Otherwise the Release workflow stops before it
+changes anything. A merge conflict between `develop` and `main` also stops it; then merge by hand and run it again.
+
+If `main` is a protected branch that blocks direct pushes, the Release workflow cannot push the merge. Then allow GitHub
+Actions to push to `main`, or merge `develop` into `main` with a pull request and create the release by hand.
 
 ## Local builds
 
