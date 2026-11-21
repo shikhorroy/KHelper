@@ -40,7 +40,8 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
         var solutionTemplate: String = DEFAULT_KOTLIN_TEMPLATE,
         var javaSolutionTemplate: String = DEFAULT_JAVA_TEMPLATE,
         var outputDirectory: String = DEFAULT_OUTPUT_DIRECTORY,
-        var autoGenerateMain: Boolean = true,
+        //~ Off by default: Copy Submission builds Main at any time, even when tests fail
+        var autoGenerateMain: Boolean = false,
     ) {
         fun templateFor(language: Language): String = when (language) {
             Language.KOTLIN -> solutionTemplate

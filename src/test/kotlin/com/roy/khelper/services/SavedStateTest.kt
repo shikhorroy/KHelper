@@ -30,6 +30,11 @@ class SavedStateTest {
     }
 
     @Test
+    fun `generate Main after a run is off by default`() {
+        assertEquals(false, PluginSettings.State().autoGenerateMain)
+    }
+
+    @Test
     fun `settings saved by version 1 load, and the removed useFastIO option is ignored`() {
         val saved = JDOMUtil.load(
             """
@@ -37,7 +42,7 @@ class SavedStateTest {
               <option name="serverPort" value="12345" />
               <option name="preferredLanguage" value="JAVA" />
               <option name="outputDirectory" value="out" />
-              <option name="autoGenerateMain" value="false" />
+              <option name="autoGenerateMain" value="true" />
               <option name="useFastIO" value="true" />
             </State>
             """.trimIndent()
@@ -48,7 +53,7 @@ class SavedStateTest {
         assertEquals(12345, state.serverPort)
         assertEquals(PluginSettings.Language.JAVA, state.preferredLanguage)
         assertEquals("out", state.outputDirectory)
-        assertEquals(false, state.autoGenerateMain)
+        assertEquals(true, state.autoGenerateMain)
         assertEquals(PluginSettings.DEFAULT_KOTLIN_TEMPLATE, state.solutionTemplate)
     }
 }

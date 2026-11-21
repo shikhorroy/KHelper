@@ -14,6 +14,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.roy.khelper.server.CompetitiveCompanionServer
 import com.roy.khelper.settings.PluginSettings.Language
+import java.awt.FlowLayout
 import java.awt.Font
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -58,9 +59,15 @@ class PluginConfigurable : Configurable {
             .addLabeledComponent(JBLabel("Output directory:"), outputDirectoryField)
             .addComponent(hint("Folder for the generated Main file, relative to the project root"))
             .addComponent(autoGenerateMainCheckbox)
+            .addComponent(hint("Copy Submission builds Main at any time, even when tests fail"))
             .addSeparator()
-            .addLabeledComponent(JBLabel("Competitive Companion port:"), serverPortField)
-            .addComponent(hint("Must match a custom port in the Competitive Companion extension settings"))
+            .addLabeledComponent(JBLabel("Competitive Companion port:"), portRow())
+            .addComponent(
+                hint(
+                    "Default: ${PluginSettings.DEFAULT_PORT}. Competitive Companion sends to it without setup. " +
+                            "Another port must be added as a custom port in the extension."
+                )
+            )
             .addComponentFillVertically(JPanel(), 0)
             .panel
     }
@@ -111,6 +118,14 @@ class PluginConfigurable : Configurable {
 
     private fun syncShownTemplate() {
         editedTemplates[shownLanguage] = templateTextArea.text
+    }
+
+    /** The port field with a link that puts back the default port. */
+    private fun portRow(): JPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        add(serverPortField)
+        add(ActionLink("Reset to Default") { serverPortField.text = PluginSettings.DEFAULT_PORT.toString() }.apply {
+            border = JBUI.Borders.emptyLeft(8)
+        })
     }
 
     private fun hint(text: String) = JBLabel(text).apply {

@@ -60,7 +60,7 @@ intellijPlatform {
               <li>Problems from Competitive Companion go to the active project only.</li>
               <li>The local server listens on localhost only and stops when the plugin unloads.</li>
               <li>Each test runs with fresh static state, a time limit and a large stack.</li>
-              <li>Main is generated only when all tests pass.</li>
+              <li>Generate Main after a run is now an option (off by default), and works only when all tests pass.</li>
               <li>Overwriting an existing solution works.</li>
               <li>Settings page shows the server port and the auto-generate option.</li>
               <li>Smaller plugin: no bundled Ktor, Netty, coroutines or Kotlin stdlib.</li>
