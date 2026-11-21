@@ -33,6 +33,9 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
 
     private var problemId: String? = null
     private var language: String? = null
+
+    //~ Row to select after the next table refresh, for example the new copy after Duplicate
+    private var rowToSelect: Int? = null
     private val tableModel = TestCaseTableModel()
 
     private val table = JBTable(tableModel).apply {
@@ -72,10 +75,13 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
                 tableAction("Enable All", "Enable all test cases", KHelperIcons.CheckAll) { setAllActive(true) },
                 tableAction("Disable All", "Disable all test cases", KHelperIcons.UncheckAll) { setAllActive(false) },
                 tableAction("Add Test Case", "Add new test case", KHelperIcons.Add) { addTestCase() },
+                tableAction("Edit Test Case", "Edit selected test case", KHelperIcons.Edit, true) { editTestCase() },
+                tableAction("Duplicate Test Case", "Add a copy below the selected test", KHelperIcons.Duplicate, true) {
+                    duplicateTestCase()
+                },
                 tableAction("Remove Test Case", "Remove selected test case", KHelperIcons.Delete, true) {
                     removeTestCase()
                 },
-                tableAction("Edit Test Case", "Edit selected test case", KHelperIcons.Edit, true) { editTestCase() },
             )
 
         val contentPanel = JPanel(BorderLayout()).apply {
@@ -106,6 +112,14 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
         if (dialog.showAndGet()) {
             service().addTestCase(problemId, language, dialog.getTestCase())
         }
+    }
+
+    private fun duplicateTestCase() {
+        val problemId = problemId ?: return
+        val language = language ?: return
+        val row = table.selectedRow.takeIf { it >= 0 } ?: return
+        rowToSelect = row + 1
+        service().duplicateTestCase(problemId, language, row)
     }
 
     private fun removeTestCase() {
@@ -157,7 +171,8 @@ class TestCaseTablePanel(private val project: Project) : JPanel(BorderLayout()) 
         fun testCaseAt(row: Int): TestCase = testCases[row]
 
         fun setTestCases(testCases: List<TestCase>) {
-            val selected = table.selectedRow
+            val selected = rowToSelect ?: table.selectedRow
+            rowToSelect = null
             this.testCases = testCases
             fireTableDataChanged()
             if (selected in testCases.indices) table.setRowSelectionInterval(selected, selected)

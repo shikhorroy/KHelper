@@ -22,6 +22,9 @@ object KHelperIcons {
     val Edit: Icon = load("/icons/edit.svg")
 
     @JvmField
+    val Duplicate: Icon = load("/icons/duplicate.svg")
+
+    @JvmField
     val CheckAll: Icon = load("/icons/check_all.svg")
 
     @JvmField

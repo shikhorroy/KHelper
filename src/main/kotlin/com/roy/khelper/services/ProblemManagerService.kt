@@ -100,6 +100,10 @@ class ProblemManagerService(private val project: Project) : PersistentStateCompo
     fun removeTestCase(problemId: String, language: String, index: Int) =
         updateTestCases(problemId, language) { if (index in it.indices) it.removeAt(index) }
 
+    /** Inserts a copy of the test case at [index] right after it. */
+    fun duplicateTestCase(problemId: String, language: String, index: Int) =
+        updateTestCases(problemId, language) { if (index in it.indices) it.add(index + 1, it[index].copy()) }
+
     fun updateTestCase(problemId: String, language: String, index: Int, testCase: TestCase) =
         updateTestCases(problemId, language) { if (index in it.indices) it[index] = testCase }
 
