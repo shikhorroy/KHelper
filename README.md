@@ -120,7 +120,8 @@ Check compatibility with the plugin verifier (add `-PverifyAllIdes` to check all
 ./gradlew verifyPlugin
 ```
 
-Releases are built and published by GitHub Actions, with the `Release` and `Publish` workflows in `.github/workflows`.
+Releases are built and published by GitHub Actions. See [docs/PIPELINES.md](docs/PIPELINES.md) for the pipelines and the
+release steps.
 
 ---
 
