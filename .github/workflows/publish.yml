@@ -2,7 +2,7 @@
 # Start it from the Actions tab with "Run workflow" and the release tag, for example v2.0.0.
 # It also starts on its own when a person publishes a GitHub Release by hand.
 # The tag sets the version: tag v2.0.0 publishes version 2.0.0.
-# Needs the repository secrets described in docs/RELEASING.md.
+# Needs the repository secrets PUBLISH_TOKEN, CERTIFICATE_CHAIN and PRIVATE_KEY.
 name: Publish
 
 on:

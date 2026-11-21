@@ -69,7 +69,7 @@ intellijPlatform {
         """.trimIndent()
     }
 
-    // Secrets come from environment variables, set only by the release workflow. See docs/RELEASING.md.
+    // Secrets come from environment variables, set only by the Publish workflow.
     signing {
         certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
         //~ An unlocked private key, so no key password is needed

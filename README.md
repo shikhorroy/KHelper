@@ -120,8 +120,7 @@ Check compatibility with the plugin verifier (add `-PverifyAllIdes` to check all
 ./gradlew verifyPlugin
 ```
 
-Releases are built and published by GitHub Actions. See [docs/RELEASING.md](docs/RELEASING.md) for the one-time setup
-and the release steps.
+Releases are built and published by GitHub Actions, with the `Release` and `Publish` workflows in `.github/workflows`.
 
 ---
 
