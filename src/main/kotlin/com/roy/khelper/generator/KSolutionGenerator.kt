@@ -1,83 +1,47 @@
 package com.roy.khelper.generator
 
-import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.psi.PsiManager
+import com.intellij.openapi.vfs.VirtualFile
 import com.roy.khelper.model.Problem
 import com.roy.khelper.settings.PluginSettings
-import java.nio.file.Paths
+import com.roy.khelper.settings.PluginSettings.Language
+import java.io.IOException
+import java.nio.file.Path
 
+/** Writes the solution file for a problem from the user's template. */
 object KSolutionGenerator {
 
-    fun generate(project: Project, problem: Problem): String {
-        val problemId = problem.generateId()
-        val settings = PluginSettings.getInstance()
-        val language = settings.state.preferredLanguage
+    fun generate(project: Project, problem: Problem, language: Language): VirtualFile {
+        val content = applyTemplate(PluginSettings.getInstance().state.templateFor(language), problem, language)
+        val filePath = resolveSolutionPath(project, problem, language)
 
-        val rawTemplate = if (language == PluginSettings.Language.KOTLIN)
-            settings.state.solutionTemplate
-        else
-            settings.state.javaSolutionTemplate
-
-        // Prepare a template with variable substitution
-        val className = if (language == PluginSettings.Language.KOTLIN) "KSolution" else "JSolution"
-        val template =
-            rawTemplate
-                .replace($$"${PROBLEM_ID}", problemId)
-                .replace($$"${PROBLEM_NAME}", problem.name)
-                .replace($$"${TIME_LIMIT}", problem.timeLimit.toString())
-                .replace($$"${MEMORY_LIMIT}", problem.memoryLimit.toString())
-                .replace($$"${CLASS_NAME}", className)
-
-        val filePath = resolveSolutionPath(project, problem)
-        val fileName = if (language == PluginSettings.Language.KOTLIN) "KSolution.kt" else "JSolution.java"
-
-        WriteAction.runAndWait<RuntimeException> {
-            // Create directories
-            val baseDir =
-                VfsUtil.createDirectoryIfMissing(filePath.parent.toString())
-                    ?: throw RuntimeException(
-                        "Failed to create directory: ${filePath.parent}"
-                    )
-
-            // Create a file
-            val file = baseDir.createChildData(this, fileName)
-            file.setBinaryContent(template.toByteArray())
-
-            // Refresh PSI
-            PsiManager.getInstance(project).findFile(file)
-        }
-
-        return filePath.toString()
+        return WriteCommandAction.writeCommandAction(project)
+            .withName("Create Solution for ${problem.name}")
+            .compute<VirtualFile, IOException> {
+                val dir = VfsUtil.createDirectoryIfMissing(filePath.parent.toString())
+                    ?: throw IOException("Failed to create directory: ${filePath.parent}")
+                //~ Reuse the file on overwrite. createChildData() fails when the file already exists.
+                val file = dir.findChild(language.fileName) ?: dir.createChildData(this, language.fileName)
+                VfsUtil.saveText(file, content)
+                file
+            }
     }
 
-    fun resolveSolutionPath(project: Project, problem: Problem): java.nio.file.Path {
-        val problemId = problem.generateId()
-        val settings = PluginSettings.getInstance()
-        val language = settings.state.preferredLanguage
+    fun applyTemplate(template: String, problem: Problem, language: Language): String =
+        template
+            .replace($$"${PROBLEM_ID}", problem.generateId())
+            .replace($$"${PROBLEM_NAME}", problem.name)
+            .replace($$"${TIME_LIMIT}", problem.timeLimit.toString())
+            .replace($$"${MEMORY_LIMIT}", problem.memoryLimit.toString())
+            .replace($$"${CLASS_NAME}", language.className)
 
-        val sourceRoot = if (language == PluginSettings.Language.KOTLIN) "kotlin" else "java"
-        val extension = if (language == PluginSettings.Language.KOTLIN) "kt" else "java"
-        val fileNameBase = if (language == PluginSettings.Language.KOTLIN) "KSolution" else "JSolution"
-
-        return Paths.get(
-            project.basePath!!,
-            "src",
-            "main",
-            sourceRoot,
-            "problems",
-            problemId,
-            "$fileNameBase.$extension"
-        )
+    fun resolveSolutionPath(project: Project, problem: Problem, language: Language): Path {
+        val basePath = project.basePath ?: throw IOException("Project '${project.name}' has no base directory")
+        return Path.of(basePath, "src", "main", language.sourceRoot, "problems", problem.generateId(), language.fileName)
     }
 
-    fun getClassName(problem: Problem): String {
-        val settings = PluginSettings.getInstance()
-        return if (settings.state.preferredLanguage == PluginSettings.Language.KOTLIN) "KSolution" else "JSolution"
-    }
-
-    fun getPackageName(problem: Problem): String {
-        return "problems.${problem.generateId()}"
-    }
+    /** The fully qualified class the test runner loads. Kotlin top-level code lives in the matching "Kt" class. */
+    fun solutionClassName(problemId: String, language: Language): String = "problems.$problemId.${language.className}"
 }

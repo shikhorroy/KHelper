@@ -1,4 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#ff0051ff">
-    <path d="M4.5 3.5V12.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <path d="M11 4L5 8L11 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <defs><filter id="s" filterUnits="userSpaceOnUse" x="0" y="0" width="40" height="40"><feDropShadow dx="0" dy="0.8" stdDeviation="0.8" flood-color="#000000" flood-opacity="0.45"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M28.5 9.5L14.92 20.0L28.5 30.5Q21.5 20.0 28.5 9.5Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.5 9.5V30.5" stroke="#FFFFFF" stroke-width="10.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M28.5 9.5L14.92 20.0L28.5 30.5Q21.5 20.0 28.5 9.5Z" fill="#FF0051"/>
+  <path d="M12.5 9.5V30.5" stroke="#2B2B2B" stroke-width="4.4" stroke-linecap="round"/>
+  <path d="M28.5 9.5L14.92 20.0L28.5 30.5" stroke="#2B2B2B" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,323 +1,272 @@
 package com.roy.khelper.generator
 
 import com.intellij.codeInsight.actions.OptimizeImportsProcessor
-import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiJavaCodeReferenceElement
+import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiPackage
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.concurrency.AppExecutorUtil
+import com.roy.khelper.services.KHelperNotifications
 import com.roy.khelper.settings.PluginSettings
-import java.nio.file.Paths
-import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtFunction
+import org.jetbrains.kotlin.psi.KtImportDirective
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
+import org.jetbrains.kotlin.psi.KtPackageDirective
+import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtReferenceExpression
+import java.io.IOException
+import java.nio.file.Path
+import java.util.concurrent.CancellationException
 
+/**
+ * Builds one submission file (Main.kt or Main.java) from a solution and every project file it uses.
+ *
+ * Reference resolving needs indexes and can be slow, so the merge runs in a background read action in smart mode.
+ * Only the final file write runs on the EDT.
+ */
 object MainGenerator {
 
-    fun generate(project: Project, solutionFilePath: String): String {
-        val settings = PluginSettings.getInstance()
-        val outputDirName = settings.state.outputDirectory.takeIf { it.isNotBlank() } ?: "output"
+    private val log = logger<MainGenerator>()
 
-        val solutionPath = Paths.get(solutionFilePath)
-        val isJava = solutionFilePath.endsWith(".java")
-        val mainFileName = if (isJava) "Main.java" else "Main.kt"
+    private val SOLUTION_CLASS_NAME = Regex("""\b(JSolution|KSolution)\b""")
+    private val PUBLIC_TYPE_MODIFIER = Regex(
+        """\bpublic\s+(?=(?:(?:final|abstract|static|sealed|non-sealed|strictfp)\s+)*(?:class|interface|enum|record|@interface)\b)"""
+    )
 
-        val basePath = Paths.get(project.basePath!!)
-        val mainPath = basePath.resolve(outputDirName).resolve(mainFileName)
-
-        return WriteAction.computeAndWait<String, RuntimeException> {
-            val solutionFile =
-                    VfsUtil.findFile(solutionPath, true)
-                            ?: throw RuntimeException("Solution file not found: $solutionFilePath")
-
-            val psiFile =
-                    PsiManager.getInstance(project).findFile(solutionFile)
-                            ?: throw RuntimeException(
-                                    "Could not find PSI for file: $solutionFilePath"
-                            )
-
-            val mergedContent =
-                    if (isJava) {
-                        generateJavaContent(psiFile as com.intellij.psi.PsiJavaFile)
-                    } else {
-                        generateKotlinContent(project, psiFile as KtFile)
+    /**
+     * Writes Main into the output directory, then calls [onDone] on the EDT with its text. Errors are shown as a
+     * notification.
+     */
+    fun generate(project: Project, solutionFilePath: String, onDone: (String) -> Unit = {}) {
+        ReadAction.nonBlocking<Result<String>> { buildContentOrError(project, solutionFilePath) }
+            .inSmartMode(project)
+            .withDocumentsCommitted(project)
+            .expireWhen { project.isDisposed }
+            .finishOnUiThread(ModalityState.nonModal()) { result ->
+                result
+                    .mapCatching { content -> writeMain(project, solutionFilePath, content) }
+                    .onSuccess(onDone)
+                    .onFailure { e ->
+                        log.warn("Failed to generate Main for $solutionFilePath", e)
+                        val fileName = PluginSettings.Language.fromFilePath(solutionFilePath).mainFileName
+                        KHelperNotifications.error(project, "Failed to generate $fileName: ${e.message}")
                     }
-
-            // Write to a Main file
-            val mainDir =
-                    VfsUtil.createDirectoryIfMissing(mainPath.parent.toString())
-                            ?: throw RuntimeException(
-                                    "Failed to create directory: ${mainPath.parent}"
-                            )
-
-            val existingMain = mainDir.findChild(mainFileName)
-            val targetFile =
-                    if (existingMain != null) {
-                        existingMain.setBinaryContent(mergedContent.toByteArray())
-                        existingMain
-                    } else {
-                        val newFile = mainDir.createChildData(this, mainFileName)
-                        newFile.setBinaryContent(mergedContent.toByteArray())
-                        newFile
-                    }
-
-            // Access the PsiFile for the newly written file to run optimization
-            val writtenPsiFile = PsiManager.getInstance(project).findFile(targetFile)
-            if (writtenPsiFile != null) {
-                // Optimize Imports
-                try {
-                    OptimizeImportsProcessor(project, writtenPsiFile).run()
-                } catch (e: Exception) {
-                    // Ignore optimization errors
-                }
             }
-
-            targetFile.path
-        }
+            .submit(AppExecutorUtil.getAppExecutorService())
     }
 
-    private fun generateJavaContent(psiFile: com.intellij.psi.PsiJavaFile): String {
-        val project = psiFile.project
-        val visitedFiles = HashSet<String>()
-        val mergedFiles = ArrayList<com.intellij.psi.PsiJavaFile>()
-        val mergedClassNames = HashSet<String>()
-        val collectedImports = HashSet<String>()
-        val collectedClasses = ArrayList<String>()
-
-        // Pass 1: Recursive Dependency Discovery
-        val queue = ArrayDeque<com.intellij.psi.PsiJavaFile>()
-        queue.add(psiFile)
-        visitedFiles.add(psiFile.virtualFile.path)
-
-        while (queue.isNotEmpty()) {
-            val currentFile = queue.removeFirst()
-            mergedFiles.add(currentFile)
-
-            // Collect top-level class names to filter imports later
-            currentFile.classes.forEach { it.name?.let { name -> mergedClassNames.add(name) } }
-
-            // Scan for dependencies via references (types, variables, etc.)
-            PsiTreeUtil.collectElements(currentFile) {
-                it is com.intellij.psi.PsiJavaCodeReferenceElement
-            }
-                    .forEach { elem ->
-                        val ref = (elem as com.intellij.psi.PsiJavaCodeReferenceElement).resolve()
-                        if (ref is com.intellij.psi.PsiClass) {
-                            val containingFile = ref.containingFile
-                            if (containingFile is com.intellij.psi.PsiJavaFile &&
-                                            containingFile != currentFile &&
-                                            containingFile.virtualFile?.path?.startsWith(
-                                                    project.basePath!!
-                                            ) == true &&
-                                            !visitedFiles.contains(containingFile.virtualFile.path)
-                            ) {
-                                visitedFiles.add(containingFile.virtualFile.path)
-                                queue.add(containingFile)
-                            }
-                        }
-                    }
+    /**
+     * Wraps real errors so they reach the notification. Cancellation is rethrown: the platform cancels a
+     * non-blocking read action when a write action starts, and then runs it again.
+     */
+    private fun buildContentOrError(project: Project, solutionFilePath: String): Result<String> =
+        try {
+            val file = LocalFileSystem.getInstance().findFileByPath(solutionFilePath)
+                ?: throw IOException("Solution file not found: $solutionFilePath")
+            val psiFile = PsiManager.getInstance(project).findFile(file)
+                ?: throw IOException("Cannot read solution file: $solutionFilePath")
+            Result.success(buildContent(project, psiFile))
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
 
-        // Pass 2: Harvest Imports and Classes
-        mergedFiles.forEach { file ->
-            // Collect imports
-            file.importList?.importStatements?.forEach {
-                val importText = it.text
-                if (importText.contains("problems.")) return@forEach
+    /** The merged submission text. Call in a read action in smart mode. */
+    internal fun buildContent(project: Project, solution: PsiFile): String = when (solution) {
+        is PsiJavaFile -> mergeJava(project, solution)
+        is KtFile -> mergeKotlin(project, solution)
+        else -> throw IOException("Not a Kotlin or Java file: ${solution.name}")
+    }
 
-                // Filter out imports of classes that are being merged
-                val ref = it.importReference?.resolve()
-                if (ref is com.intellij.psi.PsiClass && mergedClassNames.contains(ref.name)) {
-                    return@forEach
-                }
+    private fun writeMain(project: Project, solutionFilePath: String, content: String): String {
+        val basePath = project.basePath ?: throw IOException("Project has no base directory")
+        val settings = PluginSettings.getInstance().state
+        val mainFileName = PluginSettings.Language.fromFilePath(solutionFilePath).mainFileName
+        val mainDir = Path.of(basePath, settings.outputDirectoryOrDefault())
 
-                collectedImports.add(importText)
+        val mainFile = WriteCommandAction.writeCommandAction(project)
+            .withName("Generate $mainFileName")
+            .compute<VirtualFile, IOException> {
+                val dir = VfsUtil.createDirectoryIfMissing(mainDir.toString())
+                    ?: throw IOException("Failed to create directory: $mainDir")
+                val file = dir.findChild(mainFileName) ?: dir.createChildData(this, mainFileName)
+                VfsUtil.saveText(file, content)
+                file
             }
 
-            // Collect classes
+        PsiManager.getInstance(project).findFile(mainFile)?.let { psi ->
+            try {
+                OptimizeImportsProcessor(project, psi).run()
+            } catch (e: Exception) {
+                // Unused imports do not break the submission, so a failed cleanup is not an error.
+                log.info("Optimize imports failed for ${mainFile.path}", e)
+            }
+        }
+        return FileDocumentManager.getInstance().getDocument(mainFile)?.text ?: content
+    }
+
+    /** Collects the solution file and, breadth first, every project file it references. */
+    private inline fun <reified F : PsiFile> collectProjectFiles(
+        project: Project,
+        root: F,
+        crossinline referencedFiles: (F) -> Sequence<PsiFile?>,
+    ): List<F> {
+        val basePath = project.basePath ?: return listOf(root)
+        val visited = hashSetOf(root.virtualFile.path)
+        val queue = ArrayDeque(listOf(root))
+        val result = mutableListOf<F>()
+        while (queue.isNotEmpty()) {
+            val file = queue.removeFirst()
+            result += file
+            referencedFiles(file).forEach { target ->
+                val path = target?.virtualFile?.path ?: return@forEach
+                if (target is F && path.startsWith(basePath) && visited.add(path)) {
+                    queue.addLast(target)
+                }
+            }
+        }
+        return result
+    }
+
+    private fun mergeJava(project: Project, solution: PsiJavaFile): String {
+        val files = collectProjectFiles(project, solution) { file ->
+            PsiTreeUtil.findChildrenOfType(file, PsiJavaCodeReferenceElement::class.java)
+                .asSequence()
+                .map { (it.resolve() as? PsiClass)?.containingFile }
+        }
+        val mergedClassNames = files.flatMap { file -> file.classes.mapNotNull { it.name } }.toSet()
+        val mergedPackages = files.map { it.packageName }.toSet()
+
+        val imports = sortedSetOf<String>()
+        val classes = mutableListOf<String>()
+        files.forEach { file ->
+            file.importList?.importStatements?.forEach { statement ->
+                val imported = statement.importReference?.resolve() as? PsiClass
+                val qualifiedName = statement.qualifiedName
+                //~ "import a.b.*" names the package itself, "import a.b.C" names a class in package a.b
+                val importedPackage = if (statement.isOnDemand) qualifiedName else qualifiedName?.substringBeforeLast('.')
+                val fromMergedPackage = importedPackage in mergedPackages
+                if (!fromMergedPackage && imported?.name !in mergedClassNames) {
+                    imports += statement.text
+                }
+            }
             file.classes.forEach { psiClass ->
-                var classText = psiClass.text
-
-                if (file == psiFile &&
-                                (psiClass.name == "JSolution" || psiClass.name == "KSolution")
-                ) {
-                    // Rename the main solution class to Main
-                    // Use regex to be more robust with spacing and modifiers
-                    classText =
-                            classText.replace(
-                                    Regex("""\bclass\s+(JSolution|KSolution)\b"""),
-                                    "class Main"
-                            )
-                    // Ensure it's public
-                    if (!classText.trim().startsWith("public")) {
-                        classText = "public $classText"
-                    }
+                val isSolution = file == solution && psiClass.name == PluginSettings.Language.JAVA.className
+                classes += if (isSolution) {
+                    //~ The judge runs the public class Main. References to the old name are renamed too.
+                    val text = psiClass.text.replace(SOLUTION_CLASS_NAME, "Main")
+                    if (text.trimStart().startsWith("public")) text else "public $text"
                 } else {
-                    // Helper classes MUST NOT be public in the same file as Main
-                    // Also handles interfaces, enums, etc.
-                    classText = classText.replaceFirst("public class", "class")
-                    classText = classText.replaceFirst("public interface", "interface")
-                    classText = classText.replaceFirst("public enum", "enum")
-                    classText = classText.replaceFirst("public @interface", "@interface")
+                    // Only one public top-level class is allowed in Main.java.
+                    psiClass.text.replaceFirst(PUBLIC_TYPE_MODIFIER, "").replace(SOLUTION_CLASS_NAME, "Main")
                 }
-                collectedClasses.add(classText)
             }
         }
 
         return buildString {
-            // Imports
-            collectedImports.sorted().forEach { appendLine(it) }
-            if (collectedImports.isNotEmpty()) appendLine()
-
-            // Classes
-            collectedClasses.forEach {
+            imports.forEach { appendLine(it) }
+            if (imports.isNotEmpty()) appendLine()
+            classes.forEach {
                 appendLine(it)
                 appendLine()
             }
         }
     }
 
-    private fun generateKotlinContent(project: Project, psiFile: KtFile): String {
-        // --- Dependency Analysis (2-Pass Approach) ---
-        val visitedFiles = HashSet<String>() // Path -> Unit
-        val mergedFiles = ArrayList<KtFile>()
-        val mergedDeclarationNames = HashSet<String>()
-        val collectedDeclarations = ArrayList<String>()
-        val collectedImports = HashSet<String>()
+    private fun mergeKotlin(project: Project, solution: KtFile): String {
+        val files = collectProjectFiles(project, solution) { file ->
+            PsiTreeUtil.findChildrenOfType(file, KtReferenceExpression::class.java)
+                .asSequence()
+                // Import and package lines name packages, not code. Real uses of imported code are found anyway.
+                .filter { PsiTreeUtil.getParentOfType(it, KtImportDirective::class.java, KtPackageDirective::class.java) == null }
+                .map { it.references.firstOrNull()?.resolve() }
+                // A package has no file. In K2, asking for one throws.
+                .map { target -> target?.takeIf { it !is PsiPackage && it !is PsiDirectory }?.containingFile }
+        }
+        val dependencies = files.filter { it != solution }
+        val mergedNames = dependencies.flatMap { file ->
+            file.declarations.filterIsInstance<KtNamedDeclaration>().mapNotNull { it.name }
+        }.toSet()
+        val mergedPackages = files.map { it.packageFqName.asString() }.toSet()
 
-        // Pass 1: Discovery & Collection of Merged Names
-        val queue = ArrayDeque<KtFile>()
-        queue.add(psiFile)
-        visitedFiles.add(psiFile.virtualFile.path)
-
-        while (queue.isNotEmpty()) {
-            val currentFile = queue.removeFirst()
-            mergedFiles.add(currentFile)
-
-            // If it's a dependency file (not a solution file), collect its declaration names
-            if (currentFile != psiFile) {
-                currentFile.declarations.forEach { decl ->
-                    if (decl is KtNamedDeclaration && decl.name != null) {
-                        mergedDeclarationNames.add(decl.name!!)
-                        // Also adding compiled text for merging later
-                        collectedDeclarations.add(decl.text)
-                    }
-                }
-            }
-
-            // Scan for next dependencies
-            PsiTreeUtil.collectElements(currentFile) { it is KtReferenceExpression }.forEach { elem
-                ->
-                val ref = elem.references.firstOrNull()?.resolve()
-                if (ref != null) {
-                    val containingFile = ref.containingFile
-                    if (containingFile is KtFile &&
-                                    containingFile != currentFile &&
-                                    containingFile.virtualFile?.path?.startsWith(
-                                            project.basePath!!
-                                    ) == true &&
-                                    !visitedFiles.contains(containingFile.virtualFile.path)
-                    ) {
-                        visitedFiles.add(containingFile.virtualFile.path)
-                        queue.add(containingFile)
-                    }
+        val imports = sortedSetOf<String>()
+        files.forEach { file ->
+            PsiTreeUtil.findChildrenOfType(file, KtImportDirective::class.java).forEach { directive ->
+                val fqName = directive.importedFqName
+                //~ "import a.b.*" names the package itself, "import a.b.C" names a declaration in package a.b
+                val importedPackage = (if (directive.isAllUnder) fqName else fqName?.parent())?.asString()
+                val importedName = directive.importedName?.identifier
+                if (importedPackage !in mergedPackages && importedName !in mergedNames) {
+                    imports += directive.text
                 }
             }
         }
 
-        // Pass 2: Harvest Imports & Filter
-        mergedFiles.forEach { file ->
-            PsiTreeUtil.findChildrenOfType(file, KtImportDirective::class.java).forEach {
-                val importText = it.text
-                if (importText.contains("problems.")) return@forEach
-
-                // Filter: If the imported name matches any merged declaration, skip it.
-                val importedName = it.importedName?.identifier
-
-                if (importedName != null && mergedDeclarationNames.contains(importedName)) {
-                    // Skip project local ref
-                } else {
-                    collectedImports.add(importText)
-                }
-            }
-        }
-
-        // --- Construct Main Content ---
-        val ktClass = PsiTreeUtil.findChildOfType(psiFile, KtClass::class.java)
-
-        val solveBody: String
-        val kSolutionHelpers: String
-
-        if (ktClass != null) {
-            // Legacy Mode: Class-based
-            val solveMethod =
-                    ktClass.declarations.filterIsInstance<KtFunction>().find { it.name == "solve" }
-                            ?: throw RuntimeException(
-                                    "solve() method not found inside KSolution class"
-                            )
-            solveBody = solveMethod.bodyExpression?.text ?: ""
-
-            kSolutionHelpers =
-                    ktClass.declarations
-                            .filterIsInstance<KtFunction>()
-                            .filter { it.name != "solve" }
-                            .joinToString("\n\n") { it.text }
-        } else {
-            // New Mode: Top-level functions
-            val mainFunction =
-                    psiFile.declarations.filterIsInstance<KtFunction>().find { it.name == "main" }
-
-            if (mainFunction != null) {
-                solveBody = mainFunction.bodyExpression?.text ?: ""
-
-                kSolutionHelpers =
-                        psiFile.declarations
-                                .filter {
-                                    it != mainFunction &&
-                                            (it is KtFunction ||
-                                                    it is KtClassOrObject ||
-                                                    it is KtProperty)
-                                }
-                                .joinToString("\n\n") { it.text }
-            } else {
-                throw RuntimeException(
-                        "Neither KSolution class nor main() function found in ${psiFile.name}"
-                )
-            }
-        }
+        val (mainBody, solutionHelpers) = splitKotlinSolution(solution)
 
         return buildString {
-            // Imports
-            collectedImports.sorted().forEach { appendLine(it) }
-            if (collectedImports.isNotEmpty()) appendLine()
+            imports.forEach { appendLine(it) }
+            if (imports.isNotEmpty()) appendLine()
 
-            // Helper Class/Functions (Dependencies)
-            collectedDeclarations.forEach {
-                appendLine(it)
+            dependencies.forEach { file ->
+                file.declarations.filterIsInstance<KtNamedDeclaration>().forEach {
+                    appendLine(it.text)
+                    appendLine()
+                }
+            }
+            if (solutionHelpers.isNotBlank()) {
+                appendLine(solutionHelpers)
                 appendLine()
             }
 
-            // KSolution Helpers (or top-level siblings)
-            if (kSolutionHelpers.isNotBlank()) {
-                appendLine(kSolutionHelpers)
-                appendLine()
-            }
-
-            // Main Function
             appendLine("fun main() {")
-            val bodyContent = solveBody.trim().removeSurrounding("{", "}").trimIndent()
-            appendLine(bodyContent.prependIndent("    "))
+            appendLine(mainBody.trim().removeSurrounding("{", "}").trimIndent().prependIndent("    "))
             appendLine("}")
         }
     }
 
-    fun getMainContent(project: Project, solutionFilePath: String): String {
-        val isJava = solutionFilePath.endsWith(".java")
-        val mainFileName = if (isJava) "Main.java" else "Main.kt"
+    /**
+     * Returns the body of the entry point and the other declarations of the solution file. Supports a top-level
+     * main() and the older style with a KSolution class and a solve() method.
+     */
+    private fun splitKotlinSolution(solution: KtFile): Pair<String, String> {
+        val legacyClass = solution.declarations
+            .filterIsInstance<KtClass>()
+            .find { it.name == PluginSettings.Language.KOTLIN.className }
 
-        val mainPathStr = generate(project, solutionFilePath)
-        val mainFile =
-                VfsUtil.findFile(Paths.get(mainPathStr), true)
-                        ?: throw RuntimeException("$mainFileName not found at $mainPathStr")
+        if (legacyClass != null) {
+            val functions = legacyClass.declarations.filterIsInstance<KtFunction>()
+            val solve = functions.find { it.name == "solve" }
+                ?: throw IOException("solve() method not found inside KSolution class")
+            val helpers = functions.filter { it != solve }.joinToString("\n\n") { it.text }
+            return (solve.bodyExpression?.text.orEmpty()) to helpers
+        }
 
-        return String(mainFile.contentsToByteArray())
+        val main = solution.declarations.filterIsInstance<KtFunction>().find { it.name == "main" }
+            ?: throw IOException("Neither a KSolution class nor a main() function found in ${solution.name}")
+        val helpers = solution.declarations
+            .filter { it != main && (it is KtFunction || it is KtClassOrObject || it is KtProperty) }
+            .joinToString("\n\n") { it.text }
+        return (main.bodyExpression?.text.orEmpty()) to helpers
     }
 }

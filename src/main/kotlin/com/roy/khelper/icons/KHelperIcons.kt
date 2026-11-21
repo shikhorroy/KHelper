@@ -1,24 +1,34 @@
 package com.roy.khelper.icons
 
 import com.intellij.openapi.util.IconLoader
+import javax.swing.Icon
 
+/** Icons used from code. The "_dark" variants next to each file are picked for dark themes automatically. */
 object KHelperIcons {
+    //~ The 40x40 plugin logo, also shown large in the empty tool window
     @JvmField
-    val PluginIcon = IconLoader.getIcon("/icons/pluginIcon.svg", javaClass)
+    val Logo: Icon = load("/META-INF/pluginIcon.svg")
 
     @JvmField
-    val Add = IconLoader.getIcon("/icons/add.svg", javaClass)
+    val RunConfiguration: Icon = load("/icons/runConfiguration.svg")
 
     @JvmField
-    val Delete = IconLoader.getIcon("/icons/delete.svg", javaClass)
+    val Add: Icon = load("/icons/add.svg")
 
     @JvmField
-    val Run = IconLoader.getIcon("/icons/run.svg", javaClass)
+    val Delete: Icon = load("/icons/delete.svg")
 
     @JvmField
-    val Copy = IconLoader.getIcon("/icons/copy.svg", KHelperIcons::class.java)
-    val Browser = IconLoader.getIcon("/icons/browser.svg", KHelperIcons::class.java)
-    val Edit = IconLoader.getIcon("/icons/edit.svg", KHelperIcons::class.java)
-    val CheckAll = IconLoader.getIcon("/icons/check_all.svg", KHelperIcons::class.java)
-    val UncheckAll = IconLoader.getIcon("/icons/uncheck_all.svg", KHelperIcons::class.java)
+    val Edit: Icon = load("/icons/edit.svg")
+
+    @JvmField
+    val Duplicate: Icon = load("/icons/duplicate.svg")
+
+    @JvmField
+    val CheckAll: Icon = load("/icons/check_all.svg")
+
+    @JvmField
+    val UncheckAll: Icon = load("/icons/uncheck_all.svg")
+
+    private fun load(path: String): Icon = IconLoader.getIcon(path, KHelperIcons::class.java)
 }

@@ -10,6 +10,7 @@ import com.intellij.util.ui.JBUI
 import com.roy.khelper.model.TestCase
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.Font
 import javax.swing.*
 import javax.swing.border.TitledBorder
 
@@ -18,16 +19,14 @@ class AddTestCaseDialog(project: Project, private val existingTestCase: TestCase
 
     private val inputTextArea =
         JBTextArea(12, 60).apply {
-            lineWrap = true
-            wrapStyleWord = true
-            font = font.deriveFont(13f)
+            // Test data is line based, so no soft wrapping, and a monospaced font keeps columns aligned
+            font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
         }
 
     private val outputTextArea =
         JBTextArea(12, 60).apply {
-            lineWrap = true
-            wrapStyleWord = true
-            font = font.deriveFont(13f)
+            // Test data is line based, so no soft wrapping, and a monospaced font keeps columns aligned
+            font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
         }
 
     init {
@@ -50,11 +49,9 @@ class AddTestCaseDialog(project: Project, private val existingTestCase: TestCase
 
         val contentPanel = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
 
-        // Input section
         val inputPanel =
             createTextAreaPanel("Input", "Enter the test case input (stdin)", inputTextArea)
 
-        // Output section
         val outputPanel =
             createTextAreaPanel(
                 "Expected Output",
@@ -106,16 +103,11 @@ class AddTestCaseDialog(project: Project, private val existingTestCase: TestCase
         return panel
     }
 
-    fun getTestCase(): TestCase {
-        return TestCase(input = inputTextArea.text.trim(), output = outputTextArea.text.trim())
-    }
+    fun getTestCase(): TestCase = TestCase(input = inputTextArea.text.trim(), output = outputTextArea.text.trim())
 
     override fun doValidate(): ValidationInfo? {
         if (inputTextArea.text.isBlank()) {
             return ValidationInfo("Input cannot be empty", inputTextArea)
-        }
-        if (outputTextArea.text.isBlank()) {
-            return ValidationInfo("Output cannot be empty", outputTextArea)
         }
         return null
     }
